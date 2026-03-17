@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import mapImage from '@/assets/footer/map.jpg';
 import { Helmet } from 'react-helmet';
 import { Phone, Mail, MapPin, Instagram, Facebook, MessageCircle } from 'lucide-react';
 import { 
@@ -110,14 +111,16 @@ const Contato = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="h-64 rounded-xl overflow-hidden shadow-lg border-4 border-white/10 cursor-pointer" onClick={() => abrirMaps(config.maps_url)}>
+                        <div className="h-64 rounded-xl shadow-lg border-4 border-white/10 cursor-pointer overflow-hidden" onClick={() => abrirMaps(config.maps_url)}>
                              <iframe
-                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.436376594248!2d-46.588075623812745!3d-23.55278746127471!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce5ec0192e4e11%3A0x6e9a6565158a1309!2sR.%20Fernando%20Falc%C3%A3o%2C%2054%20-%20Mooca%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2003180-000!5e0!3m2!1spt-BR!2sbr!4v1703200000000!5m2!1spt-BR!2sbr"
+                                src={mapImage}
                                 width="100%"
                                 height="100%"
-                                style={{ border: 0, pointerEvents: 'none' }}
+                                scrolling="no"
+                                style={{ border: 0, pointerEvents: 'none', overflow: 'hidden' }}
                                 allowFullScreen=""
                                 loading="lazy"
+                                className='object-cover'
                             ></iframe>
                         </div>
                     </div>

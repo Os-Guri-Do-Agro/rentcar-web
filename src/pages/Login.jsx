@@ -104,11 +104,11 @@ const Login = () => {
           {/* Login Card */}
           <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
             <div className="text-center mb-8">
-              <div className="inline-block p-3 bg-[#0E3A2F] rounded-full mb-4">
+              <div className="rounded-lg mb-4 overflow-hidden flex justify-center ">
                 <img 
                   src="https://horizons-cdn.hostinger.com/8fda7eda-572b-44df-8780-0af2f709550b/design-sem-nome-hstXm.png" 
                   alt="JL RENT A CAR" 
-                  className="h-12 w-auto"
+                  className="h-13 w-[100px] rounded-[50px] "
                 />
               </div>
               <h1 className="text-3xl font-bold text-[#0E3A2F] mb-2">Bem-vindo de Volta</h1>

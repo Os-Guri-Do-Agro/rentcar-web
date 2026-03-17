@@ -2,14 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import SectionContainer from '../SectionContainer';
 
 const CTASection = () => {
   const navigate = useNavigate();
 
   return (
-    <SectionContainer className="py-0 px-0 md:py-0">
-      <div className="relative bg-[#0E3A2F] overflow-hidden">
+    <section className="relative bg-[#0E3A2F] overflow-hidden">
         {/* Background Patterns */}
         <div className="absolute top-0 right-0 w-1/2 h-full bg-[#00D166]/10 -skew-x-12 transform origin-top-right"></div>
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#00D166]/5 rounded-full filter blur-3xl"></div>
@@ -49,8 +47,7 @@ const CTASection = () => {
             </motion.div>
           </div>
         </div>
-      </div>
-    </SectionContainer>
+    </section>
   );
 };
 
