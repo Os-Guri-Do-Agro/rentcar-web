@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Loader2, Edit2, Plus, Trash2, Layout, ArrowUp, ArrowDown, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAllSecoes, updateSecao, addCard, updateCard, deleteCard, reorderCards } from '@/services/secoesService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from '@/components/ui/use-toast';
+import sectionHomeService from '@/services/section/home/sectionHome-service';
 
 
 const AdminSecoes = () => {
@@ -25,6 +25,9 @@ const AdminSecoes = () => {
     // Forms
     const [sectionForm, setSectionForm] = useState({ titulo: '', descricao: '' });
     const [cardForm, setCardForm] = useState({ titulo: '', descricao: '', icone: 'Check' });
+    const [saving, setSaving] = useState(false);
+    const [deleteCardModal, setDeleteCardModal] = useState(false);
+    const [cardToDelete, setCardToDelete] = useState(null);
 
     useEffect(() => {
         loadData();
@@ -33,8 +36,8 @@ const AdminSecoes = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const data = await getAllSecoes();
-            setSecoes(data || []);
+            const data = await sectionHomeService.getHomeSection();
+            setSecoes(data.data || []);
         } catch (error) {
             console.error(error);
             toast({ title: "Erro ao carregar seções", variant: "destructive" });
@@ -51,13 +54,16 @@ const AdminSecoes = () => {
     };
 
     const saveSection = async () => {
+        setSaving(true);
         try {
-            await updateSecao(selectedSection.slug, sectionForm);
+            await sectionHomeService.patchHomeSectionById(selectedSection.slug, sectionForm);
             toast({ title: "Seção atualizada!" });
             setEditSectionModal(false);
             loadData();
         } catch (error) {
             toast({ title: "Erro ao salvar", variant: "destructive" });
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -79,34 +85,53 @@ const AdminSecoes = () => {
         setEditCardModal(true);
     };
 
-    const handleDeleteCard = async (cardId) => {
-        if (!confirm("Tem certeza que deseja remover este card?")) return;
+    const handleDeleteCard = (card) => {
+        setCardToDelete(card);
+        setDeleteCardModal(true);
+    };
+
+    const confirmDeleteCard = async () => {
+        setSaving(true);
         try {
-            await deleteCard(selectedSection.slug, cardId);
-            // Update local state for immediate feedback
-            const updatedCards = selectedSection.cards.filter(c => c.id !== cardId);
+            await sectionHomeService.deleteHomeSecionCardSlug(selectedSection.slug, cardToDelete.id);
+            const updatedCards = selectedSection.cards.filter(c => c.id !== cardToDelete.id);
             setSelectedSection({ ...selectedSection, cards: updatedCards });
             toast({ title: "Card removido!" });
-            loadData(); // Refresh background
+            setDeleteCardModal(false);
+            loadData();
         } catch (error) {
             toast({ title: "Erro ao remover", variant: "destructive" });
+        } finally {
+            setSaving(false);
         }
     };
 
     const saveCard = async () => {
+        setSaving(true);
         try {
+            let updatedCards;
             if (selectedCard) {
-                await updateCard(selectedSection.slug, selectedCard.id, cardForm);
+                updatedCards = selectedSection.cards.map(c =>
+                    c.id === selectedCard.id ? { ...c, ...cardForm } : c
+                );
             } else {
-                await addCard(selectedSection.slug, cardForm);
+                await sectionHomeService.postHomeSectionCard(selectedSection.slug, cardForm);
+                toast({ title: "Card salvo!" });
+                setEditCardModal(false);
+                setManageCardsModal(false);
+                loadData();
+                return;
             }
+            await sectionHomeService.patchHomeSectionById(selectedSection.slug, { cards: updatedCards });
             toast({ title: "Card salvo!" });
             setEditCardModal(false);
-            setManageCardsModal(false); // Close list to force refresh or fetch new data
+            setManageCardsModal(false);
             loadData();
         } catch (error) {
             console.error(error);
             toast({ title: "Erro ao salvar card", variant: "destructive" });
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -118,14 +143,11 @@ const AdminSecoes = () => {
         
         if (targetIndex < 0 || targetIndex >= cards.length) return;
         
-        // Swap
         [cards[cardIndex], cards[targetIndex]] = [cards[targetIndex], cards[cardIndex]];
-        
-        // Optimistic update
         setSelectedSection({ ...selectedSection, cards });
         
         try {
-            await reorderCards(selectedSection.slug, cards);
+            await sectionHomeService.patchHomeSectionById(selectedSection.slug, { cards });
             loadData();
         } catch (error) {
             toast({ title: "Erro ao reordenar", variant: "destructive" });
@@ -228,7 +250,9 @@ const AdminSecoes = () => {
                     </div>
                     <DialogFooter>
                         <button onClick={() => setEditSectionModal(false)} className="px-4 py-2 text-gray-500">Cancelar</button>
-                        <button onClick={saveSection} className="px-4 py-2 bg-[#0E3A2F] text-white rounded-lg font-bold">Salvar</button>
+                        <button onClick={saveSection} disabled={saving} className="px-4 py-2 bg-[#0E3A2F] text-white rounded-lg font-bold flex items-center gap-2 disabled:opacity-70">
+                            {saving && <Loader2 size={16} className="animate-spin"/>} Salvar
+                        </button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -262,7 +286,7 @@ const AdminSecoes = () => {
                                 </div>
                                 <div className="flex gap-2">
                                     <button onClick={() => handleEditCard(card)} className="p-2 text-blue-600 bg-blue-50 rounded hover:bg-blue-100"><Edit2 size={16}/></button>
-                                    <button onClick={() => handleDeleteCard(card.id)} className="p-2 text-red-600 bg-red-50 rounded hover:bg-red-100"><Trash2 size={16}/></button>
+                                    <button onClick={() => handleDeleteCard(card)} className="p-2 text-red-600 bg-red-50 rounded hover:bg-red-100"><Trash2 size={16}/></button>
                                 </div>
                             </div>
                         ))}
@@ -306,7 +330,22 @@ const AdminSecoes = () => {
                     </div>
                     <DialogFooter>
                         <button onClick={() => setEditCardModal(false)} className="px-4 py-2 text-gray-500">Cancelar</button>
-                        <button onClick={saveCard} className="px-4 py-2 bg-[#0E3A2F] text-white rounded-lg font-bold">Salvar Card</button>
+                        <button onClick={saveCard} disabled={saving} className="px-4 py-2 bg-[#0E3A2F] text-white rounded-lg font-bold flex items-center gap-2 disabled:opacity-70">
+                            {saving && <Loader2 size={16} className="animate-spin"/>} Salvar Card
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Modal: Confirm Delete Card */}
+            <Dialog open={deleteCardModal} onOpenChange={setDeleteCardModal}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader><DialogTitle>Remover Card</DialogTitle></DialogHeader>
+                    <p className="text-gray-600 text-sm py-2">Tem certeza que deseja remover o card <span className="font-bold text-gray-800">{cardToDelete?.titulo}</span>? Esta ação não pode ser desfeita.</p>
+                    <DialogFooter>
+                        <button onClick={() => setDeleteCardModal(false)} className="px-4 py-2 text-gray-500">Cancelar</button>
+                        <button onClick={confirmDeleteCard} disabled={saving} className="px-4 py-2 bg-red-600 text-white rounded-lg font-bold flex items-center gap-2 disabled:opacity-70">
+                            {saving && <Loader2 size={16} className="animate-spin"/>} Remover
+                        </button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

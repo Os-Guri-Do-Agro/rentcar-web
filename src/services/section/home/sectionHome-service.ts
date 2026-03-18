@@ -28,6 +28,39 @@ class sectionService {
     )
   }
 
+  patchHomeSectionById(slug: string, data: any): Promise<any> {
+    return this.handleRequest(
+      api.patch(`/secoes/${slug}`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao atualizar seção'
+    )
+  }
+
+  deleteHomeSecionCardSlug(slug: string, cardId: string): Promise<any> {
+    return this.handleRequest(
+      api.delete(`/secoes/${slug}/cards/${cardId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao deletar card da seção'
+    )
+  }
+
+  postHomeSectionCard(slug: string, data: any): Promise<any> {
+    return this.handleRequest(
+      api.post(`/secoes/${slug}/cards`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao criar card na seção'
+    )
+  }
+
 }
 
 export default new sectionService()

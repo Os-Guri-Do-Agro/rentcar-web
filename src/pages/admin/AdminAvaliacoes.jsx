@@ -7,6 +7,7 @@ import {
 } from '@/services/avaliacoesService';
 import { uploadFotoAvaliacao } from '@/services/uploadService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import avaliacoesService from '@/services/avaliacoes/avaliacoes-service';
 
 const AdminAvaliacoes = () => {
     const [reviews, setReviews] = useState([]);
@@ -38,8 +39,8 @@ const AdminAvaliacoes = () => {
         setLoading(true);
         console.log("Fetching reviews...");
         try {
-            const data = await getAllAvaliacoesAdmin();
-            setReviews(data || []);
+            const data = await avaliacoesService.getAvaliacoes();
+            setReviews(data.data || []);
         } catch (error) {
             console.error(error);
             toast({ title: "Erro ao carregar avaliações", variant: "destructive" });

@@ -8,7 +8,7 @@ const InputField = ({
   label, name, value, onChange, onBlur, error, success, type = "text", placeholder, icon: Icon, disabled = false 
 }) => (
   <div className="relative mb-4">
-    <label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-1.5 flex justify-between">
+    <label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-1.5 md:flex justify-between">
       {label}
       <AnimatePresence>
         {error && (
