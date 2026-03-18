@@ -73,7 +73,7 @@ export const getColumnName = (tipo_locacao, tipo_plano, km = null) => {
 /**
  * Helper to structure flat car columns into nested pricing object for UI
  */
-const structureCarPricing = (car) => {
+export const structureCarPricing = (car) => {
     if (!car) return null;
 
     const buildSection = (type) => {

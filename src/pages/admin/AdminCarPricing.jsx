@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { getAllCarsPricing } from '@/services/carPricingService';
-import { Loader2, Search, Car, Tag, Edit, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { getAllCarsPricing, structureCarPricing } from '@/services/carPricingService';
+import { Loader2, Search, Car, Tag, Edit, AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import CarPricingModal from '@/components/admin/CarPricingModal';
 import { motion } from 'framer-motion';
+import carService from '@/services/cars/carService';
 
 const PricingCard = ({ title, data, color, type, onEdit }) => {
     // Check if any price is set (> 0)
@@ -61,49 +62,47 @@ const PricingCard = ({ title, data, color, type, onEdit }) => {
     );
 };
 
+const ITEMS_PER_PAGE = 20;
+
 const AdminCarPricing = () => {
     const navigate = useNavigate();
     const [cars, setCars] = useState([]);
-    const [filteredCars, setFilteredCars] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCar, setSelectedCar] = useState(null);
     const [modalType, setModalType] = useState('particular');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const { toast } = useToast();
 
-    const fetchData = async () => {
+    const fetchData = async (page = currentPage, search = searchTerm) => {
         setLoading(true);
         setError(null);
-        console.log("[AdminCarPricing] Buscando preços de todos os carros...");
         try {
-            const res = await getAllCarsPricing();
-            if (res.success) {
-                console.log(`[AdminCarPricing] Carregado ${res.data.length} carros`);
-                setCars(res.data);
-                setFilteredCars(res.data);
-            } else {
-                console.error("[AdminCarPricing] Fetch error:", res.error);
-                setError(res.error || "Falha desconhecida ao carregar dados.");
-            }
+            const result = await carService.getCarsPagination(search, String(page), String(ITEMS_PER_PAGE));
+            const raw = result?.data?.data ?? [];
+            const total = result?.data?.total ?? raw.length;
+            const data = raw.map(car => ({ ...car, pricing: structureCarPricing(car) }));
+            setCars(data);
+            setTotalPages(Math.max(1, Math.ceil(total / ITEMS_PER_PAGE)));
         } catch (err) {
-            console.error("[AdminCarPricing] Erro fatal:", err);
             setError(err.message || "Erro de conexão ao buscar dados.");
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { fetchData(); }, []);
-
     useEffect(() => {
-        let result = cars.filter(c => 
-            c.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            c.marca.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setFilteredCars(result);
-    }, [searchTerm, cars]);
+        const timer = setTimeout(() => {
+            setCurrentPage(1);
+            fetchData(1, searchTerm);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    useEffect(() => { fetchData(currentPage, searchTerm); }, [currentPage]);
 
     const openModal = (car, type) => {
         console.log(`[AdminCarPricing] Abrindo modal para ${car.nome} / ${type}`);
@@ -165,12 +164,12 @@ const AdminCarPricing = () => {
                 <div className="flex justify-center h-64 items-center"><Loader2 className="animate-spin text-[#0E3A2F]" size={48}/></div>
             ) : (
                 <div className="grid grid-cols-1 gap-6">
-                    {filteredCars.length === 0 ? (
+                    {cars.length === 0 ? (
                         <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
                             <p className="text-gray-500">Nenhum veículo encontrado.</p>
                         </div>
                     ) : (
-                        filteredCars.map((car, index) => (
+                        cars.map((car, index) => (
                             <motion.div 
                                 key={car.id}
                                 initial={{ opacity: 0, y: 10 }}
@@ -215,6 +214,64 @@ const AdminCarPricing = () => {
                                 </div>
                             </motion.div>
                         ))
+                    )}
+
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 pt-4">
+                            <button
+                                onClick={() => setCurrentPage(1)}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1.5 rounded-lg border bg-white text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                «
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="p-2 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 2)
+                                .reduce((acc, page, idx, arr) => {
+                                    if (idx > 0 && page - arr[idx - 1] > 1) acc.push('...');
+                                    acc.push(page);
+                                    return acc;
+                                }, [])
+                                .map((item, idx) =>
+                                    item === '...' ? (
+                                        <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">...</span>
+                                    ) : (
+                                        <button
+                                            key={item}
+                                            onClick={() => setCurrentPage(item)}
+                                            className={`w-9 h-9 rounded-lg border text-sm font-bold transition-colors ${
+                                                item === currentPage
+                                                    ? 'bg-[#0E3A2F] text-white border-[#0E3A2F]'
+                                                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            {item}
+                                        </button>
+                                    )
+                                )
+                            }
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="p-2 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(totalPages)}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1.5 rounded-lg border bg-white text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                »
+                            </button>
+                        </div>
                     )}
                 </div>
             )}

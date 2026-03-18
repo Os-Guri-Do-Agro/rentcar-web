@@ -4,10 +4,8 @@
  */
 
 export const formatarData = (data) => {
-  console.log(`[DATE_UTILS] Formatando data:`, data);
 
   if (!data) {
-    console.log(`[DATE_UTILS] Data inválida (null/undefined)`);
     return "-";
   }
 
@@ -16,7 +14,6 @@ export const formatarData = (data) => {
 
     // Validate if it's a valid date
     if (isNaN(dataObj.getTime())) {
-      console.log(`[DATE_UTILS] Data inválida (NaN):`, data);
       return "-";
     }
 
@@ -37,7 +34,6 @@ export const formatarData = (data) => {
     // If the time is 00:00, sometimes users prefer just the date, but requirement says "DD/MM/YYYY HH:mm"
     // Let's stick to the requested format.
     
-    console.log(`[DATE_UTILS] Resultado: ${formatted}`);
     return formatted;
 
   } catch (error) {

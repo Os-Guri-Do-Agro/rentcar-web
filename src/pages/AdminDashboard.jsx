@@ -160,7 +160,7 @@ const AdminDashboard = () => {
                </div>
             </Link>
 
-            <Link to="/admin/fleet" className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 hover:border-[#00D166] transition-all group">
+            <Link to="/admin/precos-carros" className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 hover:border-[#00D166] transition-all group">
                <div className="bg-purple-100 text-purple-600 p-2 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
                  <TrendingUp size={20} />
                </div>

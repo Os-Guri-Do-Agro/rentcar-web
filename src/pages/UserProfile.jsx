@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { updateUserProfile, uploadProfilePhoto } from '@/services/authService';
 import { validateCPF, validatePhone, validateCEP, formatCPF, formatPhone, formatCEP } from '@/lib/validationUtils';
 import { useToast } from '@/components/ui/use-toast';
 import { User, Phone, MapPin, FileText, Edit2, Save, X, Camera, Loader2 } from 'lucide-react';
@@ -112,13 +111,12 @@ const UserProfile = () => {
   const handleUpdate = async (section, data) => {
     setLoading(true);
     try {
-      await updateUserProfile(userInfo.id, data);
+      await userService.patchUserById(userInfo.id, data);
       toast({
         title: "Perfil atualizado!",
         description: "Suas informações foram salvas com sucesso.",
         className: "bg-green-600 text-white border-none"
       });
-      // Close relevant section
       if (section === 'personal') setPersonalEditing(false);
       if (section === 'contact') setContactEditing(false);
       if (section === 'address') setAddressEditing(false);
@@ -139,8 +137,10 @@ const UserProfile = () => {
 
     setLoading(true);
     try {
-      const url = await uploadProfilePhoto(userInfo.id, file);
-      setFormData(prev => ({ ...prev, foto_perfil_url: url }));
+      const formDataAvatar = new FormData();
+      formDataAvatar.append('file', file);
+      await userService.postUserAvatar(formDataAvatar);
+      await findUserInfo();
       toast({
         title: "Foto atualizada!",
         description: "Sua nova foto de perfil foi salva.",

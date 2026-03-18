@@ -56,6 +56,7 @@ class carService {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        maxRedirects: 0,
       }),
       'Erro ao atualizar carro'
     )
@@ -126,6 +127,17 @@ class carService {
         },
       }),
       'Erro ao deletar carro'
+    )
+  }
+
+  getCarsPagination(search: string, page: string, limit: string): Promise<any> {
+    return this.handleRequest(
+      api.get(`/cars/pagination?search=${search}&page=${page}&limit=${limit}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao buscar carros'
     )
   }
 

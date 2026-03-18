@@ -71,20 +71,11 @@ const CarForm = () => {
           setPreviewImage(data.data.imagem_url || data.data.foto_principal);
           
           // Parse rental types
-          if (data.data.tipos_aluguel) {
-            const types = data.data.tipos_aluguel.split(',');
-            setRentalTypes({
-              particular: types.includes('particular'),
-              motorista: types.includes('motorista'),
-              corporativo: types.includes('corporativo')
-            });
-          } else {
-             setRentalTypes({
-               particular: data.data.disponivel_particular || false,
-               motorista: data.data.disponivel_motorista || false,
-               corporativo: false
-             });
-          }
+          setRentalTypes({
+            particular: data.data.disponivel_particular || false,
+            motorista: data.data.disponivel_motorista || false,
+            corporativo: data.data.disponivel_corporativo || false
+          });
 
           if (data.data.planos_km && Array.isArray(data.data.planos_km)) {
               setKmPlans(data.data.planos_km);
@@ -173,10 +164,11 @@ const CarForm = () => {
       imagem_url: data.imagem_url || previewImage || data.foto_principal,
       foto_principal: data.imagem_url || previewImage || data.foto_principal || null,
       tipos_aluguel: tiposAluguelStr,
-      tipo_locacao: tiposAluguelStr,
       para_particular: rentalTypes.particular,
+      tipo_locacao: tiposAluguelStr,
       disponivel_particular: rentalTypes.particular,
       disponivel_motorista: rentalTypes.motorista,
+      disponivel_corporativo: rentalTypes.corporativo,
       especificacoes: specs,
       ano: data.ano ? parseInt(data.ano) : null,
       combustivel: data.combustivel,
@@ -186,6 +178,7 @@ const CarForm = () => {
       cor: data.cor,
     };
 
+    console.log('payload enviado:', JSON.stringify(payload, null, 2));
     try {
       if (isEditMode) {
         await carService.patchCarById(id, payload);

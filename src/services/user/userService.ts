@@ -28,6 +28,51 @@ class userService {
     )
   }
 
+  getClientPagined(search: string, todos: boolean, page: string, limit: string): Promise<any> {
+    return this.handleRequest(
+      api.get(`/users/pagination?search=${search}&todos=${todos}&page=${page}&limit=${limit}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao buscar usuários'
+    )
+  }
+
+  getUserById(id: string): Promise<any> {
+    return this.handleRequest(
+      api.get(`/users/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao buscar usuário'
+    )
+  }
+
+  patchUserById(id: string, data: any): Promise<any> {
+    return this.handleRequest(
+      api.patch(`/users/${id}`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao atualizar usuário'
+    )
+  }
+
+  postUserAvatar(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/users/me/avatar', data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      }),
+      'Erro ao atualizar avatar do usuário'
+    )
+  }
+
 }
 
 export default new userService()

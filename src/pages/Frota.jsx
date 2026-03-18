@@ -40,7 +40,7 @@ const Frota = () => {
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const [segmento, setSegmento] = useState('');
+    const [segmento, setSegmento] = useState('particular');
     const [plano, setPlano] = useState('');
     const [franquia, setFranquia] = useState('');
 
@@ -105,7 +105,6 @@ const Frota = () => {
                             <label className="text-sm font-semibold text-gray-500">Segmento</label>
                             <div className="flex rounded-lg overflow-hidden border border-gray-200 p-1 bg-gray-50 gap-1">
                                 {[
-                                    { id: '', label: 'Todos', icon: Check, color: 'bg-gray-700 text-white shadow-md' },
                                     { id: 'particular', label: 'Particular', icon: Users, color: 'bg-blue-600 text-white shadow-md' },
                                     { id: 'motorista', label: 'Motorista', icon: Car, color: 'bg-green-600 text-white shadow-md' },
                                     { id: 'corporativo', label: 'Corp.', icon: Building2, color: 'bg-purple-600 text-white shadow-md' },

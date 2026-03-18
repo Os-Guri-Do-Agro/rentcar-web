@@ -20,6 +20,7 @@ import {
     getClienteAvaliacaoHistorico,
     getClienteReservas 
 } from '@/services/clienteAvaliacaoService';
+import userService from '@/services/user/userService';
 
 const AdminDetalhesCliente = () => {
     const { clienteId } = useParams();
@@ -40,19 +41,26 @@ const AdminDetalhesCliente = () => {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
+        infoClient();
         fetchData();
     }, [clienteId]);
 
+    const infoClient = async () => {
+        try {
+            const res = await userService.getUserById(clienteId);
+            setCliente(res.data);
+        } catch (err) {
+            console.error("Erro ao buscar cliente:", err);
+            toast({ title: "Erro", description: "Não foi possível carregar o cliente.", variant: "destructive" });
+        }
+    }
+
     const fetchData = async () => {
         setLoading(true);
-        console.log(`[AdminDetalhesCliente] Buscando detalhes cliente ${clienteId}`);
 
         try {
-            const { data: clientData, error } = await supabase.from('users').select('*').eq('id', clienteId).single();
-            if(error) throw error;
-            setCliente(clientData);
 
-            const av = await getClienteAvaliacao(clienteId);
+            const av = await userService.getUserById(clienteId);
             setAvaliacao(av);
             if (av) {
                 setEditNota(av.nota);
@@ -64,14 +72,6 @@ const AdminDetalhesCliente = () => {
 
             const res = await getClienteReservas(clienteId);
             setReservas(res);
-            
-            // Debug logs for dates and docs
-            if (res && res.length > 0) {
-                res.forEach(r => {
-                    console.log(`[DATAS] Reserva ${r.id.slice(0,6)} - data_retirada: ${r.data_retirada}, data_devolucao: ${r.data_devolucao}`);
-                    console.log(`[DOCS] Reserva ${r.id.slice(0,6)} - Documentos: ${r.reserva_documentos?.length || 0}`);
-                });
-            }
 
         } catch (error) {
             console.error("Erro ao buscar dados do cliente:", error);
@@ -83,7 +83,6 @@ const AdminDetalhesCliente = () => {
 
     const handleSaveAvaliacao = async () => {
         setSaving(true);
-        console.log("Salvando avaliação...");
         const result = await updateClienteAvaliacao(clienteId, editNota, editNotasPessoais, usuario.id);
         
         if (result.success) {
@@ -99,8 +98,6 @@ const AdminDetalhesCliente = () => {
     const getStatusBadge = (reserva) => {
         const hasDocs = reserva.reserva_documentos && reserva.reserva_documentos.length > 0;
         const status = reserva.status;
-
-        console.log(`[STATUS] Reserva ${reserva.id.slice(0,6)}: ${status}, documentos: ${reserva.reserva_documentos?.length || 0}`);
 
         if (status === 'cancelada') {
             return (

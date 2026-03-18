@@ -6,6 +6,7 @@ import { getAllSecoes, updateSecao, addCard, updateCard, deleteCard, reorderCard
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from '@/components/ui/use-toast';
 
+
 const AdminSecoes = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
