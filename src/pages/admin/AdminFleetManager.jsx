@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import CarPricingModal from '@/components/admin/CarPricingModal';
 import { cn } from '@/lib/utils';
+import carService from '@/services/cars/carService';
 
 const AdminFleetManager = () => {
   // Initialize with empty arrays to prevent undefined errors
@@ -20,6 +21,7 @@ const AdminFleetManager = () => {
   // Modal states
   const [selectedCar, setSelectedCar] = useState(null);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -29,7 +31,7 @@ const AdminFleetManager = () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await getAllCarsPricing(); 
+      const result = await carService.getCars('',''); 
       if (result.success && Array.isArray(result.data)) {
           console.log(`[AdminFleetManager] ${result.data.length} carros carregados.`);
           setCars(result.data);
@@ -117,15 +119,16 @@ const AdminFleetManager = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-      if(!window.confirm("Tem certeza que deseja excluir este veículo?")) return;
+  const handleDelete = async () => {
       try {
-          await deleteCar(id);
-          setCars(cars.filter(c => c.id !== id));
+          await carService.deleteCarById(deleteConfirmId);
+          setCars(cars.filter(c => c.id !== deleteConfirmId));
           toast({ title: "Carro excluído", className: "bg-green-600 text-white" });
       } catch (error) {
           console.error("[AdminFleetManager] Erro ao excluir:", error);
           toast({ title: "Erro ao excluir", variant: "destructive" });
+      } finally {
+          setDeleteConfirmId(null);
       }
   }
 
@@ -309,7 +312,7 @@ const AdminFleetManager = () => {
                     <td className="px-6 py-4 text-right">
                        <div className="flex justify-end gap-2">
                           <button onClick={() => navigate(`/admin/car/${car.id}`)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"><Edit2 size={18} /></button>
-                          <button onClick={() => handleDelete(car.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"><Trash2 size={18} /></button>
+                          <button onClick={() => setDeleteConfirmId(car.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"><Trash2 size={18} /></button>
                        </div>
                     </td>
                   </tr>
@@ -320,7 +323,24 @@ const AdminFleetManager = () => {
         )}
       </div>
 
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-red-100 rounded-full"><Trash2 size={20} className="text-red-600" /></div>
+              <h2 className="text-lg font-bold text-gray-800">Excluir veículo</h2>
+            </div>
+            <p className="text-gray-600 mb-6">Tem certeza que deseja excluir este veículo? Esta ação não pode ser desfeita.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-medium">Cancelar</button>
+              <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold">Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <CarPricingModal 
+      className="w-full max-w-6xl"
         car={selectedCar} 
         isOpen={isPricingModalOpen} 
         onClose={() => {

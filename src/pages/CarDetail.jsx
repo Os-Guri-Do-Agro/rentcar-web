@@ -14,6 +14,7 @@ import { Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import carService from '@/services/cars/carService';
 
 const CarDetail = () => {
   const { carroId } = useParams();
@@ -29,7 +30,7 @@ const CarDetail = () => {
     topRef.current?.scrollIntoView({ behavior: 'smooth' });
     const fetchCar = async () => {
       console.log('Loading car:', carroId);
-      const { data, error } = await supabase.from('cars').select('*').eq('id', carroId).single();
+      const { data, error } = await carService.getCarById(carroId);
       if (error) {
         toast({ title: "Erro", description: "Veículo não encontrado", variant: "destructive" });
         return;

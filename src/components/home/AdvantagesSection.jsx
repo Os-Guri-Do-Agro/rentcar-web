@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Clock, Car, FileCheck, Banknote, Sparkles, Loader2, Check, Wrench, Wrench as Tool } from 'lucide-react';
 import SectionContainer from '../SectionContainer';
-import { getSecao } from '@/services/secoesService';
-import { supabase } from '@/lib/supabaseClient';
+import sectionHomeService from '@/services/section/home/sectionHome-service';
 
 const ICON_MAP = {
   'Shield': Shield,
@@ -23,8 +22,8 @@ const AdvantagesSection = () => {
 
   const fetchData = async () => {
     try {
-      console.log("[AdvantagesSection] Fetching data...");
-      const secao = await getSecao('vantagens');
+      const response = await sectionHomeService.getHomeSection();
+      const secao = response.data?.find(s => s.slug === 'vantagens');
       if (secao) setData(secao);
     } catch (err) {
       console.error("[AdvantagesSection] Error:", err);
@@ -35,23 +34,6 @@ const AdvantagesSection = () => {
 
   useEffect(() => {
     fetchData();
-
-    // Realtime updates
-    const channel = supabase
-      .channel('public:secoes_home')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'secoes_home', filter: 'slug=eq.vantagens' },
-        (payload) => {
-          console.log("[AdvantagesSection] Real-time update received:", payload);
-          if (payload.new) setData(payload.new);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   if (loading) return <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-[#00D166]"/></div>;

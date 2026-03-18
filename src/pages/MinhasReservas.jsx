@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, ChevronRight, Car as CarIcon, Loader2 } from 'lucide-react';
+import { Calendar, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
-import { getUserReservas } from '@/services/reservaService';
-import { logReservaDebug } from '@/lib/debugUtils';
+import reservasServices from '@/services/reservas/reservas-services';
 
 const MinhasReservas = () => {
-  // [REPLACE] Replaced user with usuario
   const { usuario } = useAuth();
   const navigate = useNavigate();
   const [reservas, setReservas] = useState([]);
@@ -17,7 +15,6 @@ const MinhasReservas = () => {
   useEffect(() => {
     if (usuario) {
       fetchReservas();
-      // [REPLACE] usuario.id
       const sub = supabase.channel(`my_reservas_${usuario.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas', filter: `usuario_id=eq.${usuario.id}` }, () => {
             fetchReservas();
@@ -28,19 +25,13 @@ const MinhasReservas = () => {
   }, [usuario]);
 
   const fetchReservas = async () => {
-    console.log("[PAGE] Using usuario.id:", usuario.id);
-    console.log("[MinhasReservas] Using getUserReservas with explicit FK syntax");
-    logReservaDebug(`[MINHAS_RESERVAS] Carregando reservas para usuario_id: ${usuario.id}`);
-    
     try {
-        // [REPLACE] usuario.id
-        const data = await getUserReservas(usuario.id);
-        logReservaDebug(`[MINHAS_RESERVAS] Encontradas: ${data.length}`);
-        setReservas(data || []);
+      const res = await reservasServices.getMyReservas();
+      setReservas(res.data || []);
     } catch (error) {
-        console.error("[MINHAS_RESERVAS] Erro:", error);
+      console.error("[MINHAS_RESERVAS] Erro:", error);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 

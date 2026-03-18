@@ -5,6 +5,7 @@ import { updateUserProfile, uploadProfilePhoto } from '@/services/authService';
 import { validateCPF, validatePhone, validateCEP, formatCPF, formatPhone, formatCEP } from '@/lib/validationUtils';
 import { useToast } from '@/components/ui/use-toast';
 import { User, Phone, MapPin, FileText, Edit2, Save, X, Camera, Loader2 } from 'lucide-react';
+import userService from '@/services/user/userService';
 
 const Section = ({ title, icon: Icon, children, isEditing, onEdit, onSave, onCancel, loading }) => (
   <motion.div 
@@ -72,6 +73,32 @@ const UserProfile = () => {
   const [personalEditing, setPersonalEditing] = useState(false);
   const [contactEditing, setContactEditing] = useState(false);
   const [addressEditing, setAddressEditing] = useState(false);
+  const [userInfo, setUserInfo] = useState(null);
+
+  const findUserInfo = async () => {
+    try {
+      const res = await userService.getUsersMe()
+      const data = res.data
+      setUserInfo(data)
+      setFormData({
+        nome: data.nome || '',
+        email: data.email || '',
+        telefone: data.telefone || '',
+        cpf: data.cpf || '',
+        data_nascimento: data.data_nascimento || '',
+        endereco_rua: data.endereco_rua || '',
+        endereco_numero: data.endereco_numero || '',
+        endereco_complemento: data.endereco_complemento || '',
+        endereco_cidade: data.endereco_cidade || '',
+        endereco_estado: data.endereco_estado || '',
+        endereco_cep: data.endereco_cep || '',
+        cnh: data.cnh || '',
+        foto_perfil_url: data.user_avatars || ''
+      })
+    } catch (e) {
+      console.error(e)
+    }
+  }
   
   const [loading, setLoading] = useState(false);
   
@@ -79,31 +106,13 @@ const UserProfile = () => {
   const [formData, setFormData] = useState({});
 
   useEffect(() => {
-    if (usuario) {
-      console.log("[PAGE] Using usuario.id:", usuario.id);
-      setFormData({
-        nome: usuario.nome || '',
-        email: usuario.email || '',
-        telefone: usuario.telefone || '',
-        cpf: usuario.cpf || '',
-        data_nascimento: usuario.data_nascimento || '',
-        endereco_rua: usuario.endereco_rua || '',
-        endereco_numero: usuario.endereco_numero || '',
-        endereco_complemento: usuario.endereco_complemento || '',
-        endereco_cidade: usuario.endereco_cidade || '',
-        endereco_estado: usuario.endereco_estado || '',
-        endereco_cep: usuario.endereco_cep || '',
-        cnh: usuario.cnh || '',
-        foto_perfil_url: usuario.foto_perfil_url || ''
-      });
-    }
-  }, [usuario]);
+    findUserInfo()
+  }, []);
 
   const handleUpdate = async (section, data) => {
     setLoading(true);
     try {
-      // [REPLACE] usuario.id
-      await updateUserProfile(usuario.id, data);
+      await updateUserProfile(userInfo.id, data);
       toast({
         title: "Perfil atualizado!",
         description: "Suas informações foram salvas com sucesso.",
@@ -130,8 +139,7 @@ const UserProfile = () => {
 
     setLoading(true);
     try {
-      // [REPLACE] usuario.id
-      const url = await uploadProfilePhoto(usuario.id, file);
+      const url = await uploadProfilePhoto(userInfo.id, file);
       setFormData(prev => ({ ...prev, foto_perfil_url: url }));
       toast({
         title: "Foto atualizada!",
@@ -186,7 +194,7 @@ const UserProfile = () => {
             onEdit={() => setPersonalEditing(true)}
             onCancel={() => {
               setPersonalEditing(false);
-              setFormData(prev => ({ ...prev, nome: usuario.nome, cpf: usuario.cpf, data_nascimento: usuario.data_nascimento }));
+              setFormData(prev => ({ ...prev, nome: userInfo.nome, cpf: userInfo.cpf, data_nascimento: userInfo.data_nascimento }));
             }}
             onSave={() => handleUpdate('personal', { nome: formData.nome, cpf: formData.cpf, data_nascimento: formData.data_nascimento })}
             loading={loading}
@@ -223,7 +231,7 @@ const UserProfile = () => {
             onEdit={() => setContactEditing(true)}
             onCancel={() => {
               setContactEditing(false);
-              setFormData(prev => ({ ...prev, telefone: usuario.telefone }));
+              setFormData(prev => ({ ...prev, telefone: userInfo.telefone }));
             }}
             onSave={() => handleUpdate('contact', { telefone: formData.telefone })}
             loading={loading}
@@ -253,12 +261,12 @@ const UserProfile = () => {
                 setAddressEditing(false);
                 setFormData(prev => ({ 
                   ...prev, 
-                  endereco_cep: usuario.endereco_cep,
-                  endereco_rua: usuario.endereco_rua,
-                  endereco_numero: usuario.endereco_numero,
-                  endereco_complemento: usuario.endereco_complemento,
-                  endereco_cidade: usuario.endereco_cidade,
-                  endereco_estado: usuario.endereco_estado
+                  endereco_cep: userInfo.endereco_cep,
+                  endereco_rua: userInfo.endereco_rua,
+                  endereco_numero: userInfo.endereco_numero,
+                  endereco_complemento: userInfo.endereco_complemento,
+                  endereco_cidade: userInfo.endereco_cidade,
+                  endereco_estado: userInfo.endereco_estado
                 }));
               }}
               onSave={() => handleUpdate('address', { 

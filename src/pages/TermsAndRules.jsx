@@ -3,6 +3,8 @@ import { Helmet } from 'react-helmet';
 import { supabase } from '@/lib/supabaseClient';
 import { Loader2, Shield, Book, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import termosServices from '@/services/termos/termos-services';
+import regrasService from '@/services/regrasGerais/regras-service';
 
 const TermsAndRules = () => {
   const [regras, setRegras] = useState([]);
@@ -14,8 +16,8 @@ const TermsAndRules = () => {
     const fetchData = async () => {
       try {
         const [regrasRes, termosRes] = await Promise.all([
-          supabase.from('regras_gerais').select('*').order('titulo'),
-          supabase.from('termos_condicoes').select('*').order('secao')
+          await regrasService.getRegras(),
+          await termosServices.getTermos()
         ]);
         
         if (regrasRes.data) setRegras(regrasRes.data);

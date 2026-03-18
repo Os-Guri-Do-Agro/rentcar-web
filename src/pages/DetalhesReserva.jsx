@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Loader2, ArrowLeft, FileText } from 'lucide-react';
 import { getReservaById } from '@/services/reservaService';
 import DocumentosDisplay from '@/components/DocumentosDisplay';
+import reservasServices from '@/services/reservas/reservas-services';
 
 const DetalhesReserva = () => {
   const { reservaId } = useParams();
@@ -20,8 +21,8 @@ const DetalhesReserva = () => {
 
   const fetchData = async () => {
     try {
-        const data = await getReservaById(reservaId);
-        setReserva(data);
+        const data = await reservasServices.getReservasById(reservaId);
+        setReserva(data.data);
     } catch (error) {
         console.error(error);
     } finally {

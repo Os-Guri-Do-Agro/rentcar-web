@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Loader2, Calendar, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, FileText, Download, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import reservasServices from '@/services/reservas/reservas-services';
 
 const AdminReservations = () => {
   const [reservas, setReservas] = useState([]);
@@ -23,17 +24,9 @@ const AdminReservations = () => {
       console.log("[AdminReservations] Fetching reservas with explicit FK syntax");
 
       // FK Explícita para users e cars
-      const { data, error } = await supabase
-        .from('reservas')
-        .select(`
-            *,
-            users:users!reservas_usuario_id_fkey (nome, email, telefone),
-            cars:cars!reservas_carro_id_fkey (nome, placa)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setReservas(data);
+      const response = await reservasServices.getReservas();
+      if (!response?.success) throw new Error('Falha ao buscar reservas');
+      setReservas(response.data);
       setLastSynced(new Date());
       setSyncStatus('synced');
 
