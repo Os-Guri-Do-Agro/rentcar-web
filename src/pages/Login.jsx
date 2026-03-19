@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import authService from '@/services/auth/auth-service';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -56,8 +57,9 @@ const Login = () => {
 
     setIsSubmitting(true);
     try {
-        const result = await login(email, password);
+        const res = await authService(email, password);
         // If login throws, it goes to catch. If returns object, success.
+        localStorage.setItem('token', res.data.token);
         toast({
             title: "Login realizado com sucesso!",
             description: "Bem-vindo de volta à JL Rent a Car",

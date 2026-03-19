@@ -28,6 +28,51 @@ class avaliacoesService {
     )
   }
 
+  postAvaliacoes(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/avaliacoes', data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao criar avaliação'
+    )
+  }
+
+  postPhotoAvaliacoes(id: string, data: any): Promise<any> {
+    return this.handleRequest(
+      api.post(`/avaliacoes/${id}/photo`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      }),
+      'Erro ao criar foto da avaliação'
+    )
+  }
+
+  patchAvaliacoes(id: string, data: any): Promise<any> {
+    return this.handleRequest(
+      api.patch(`/avaliacoes/${id}`, data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao atualizar avaliação'
+    )
+  }
+
+  deleteAvaliacoesById(id: string): Promise<any> {
+    return this.handleRequest(
+      api.delete(`/avaliacoes/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+      'Erro ao deletar avaliação'
+    )
+  }
+
 }
 
 export default new avaliacoesService()

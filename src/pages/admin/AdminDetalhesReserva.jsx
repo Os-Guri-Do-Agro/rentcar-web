@@ -26,8 +26,9 @@ const AdminDetalhesReserva = () => {
 
     useEffect(() => {
         fetchData();
-        const sub = supabase.channel(`admin_detail_${reservaId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'reservas', filter: `id=eq.${reservaId}` }, () => fetchData()).subscribe();
-        return () => sub.unsubscribe();
+        // const sub = supabase.channel(`admin_detail_${reservaId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'reservas', filter: `id=eq.${reservaId}` }, () => fetchData()).subscribe();
+        // console.log('BATEU AQUI: ',sub)
+        // return () => sub.unsubscribe();
     }, [reservaId]);
 
     const fetchData = async () => {

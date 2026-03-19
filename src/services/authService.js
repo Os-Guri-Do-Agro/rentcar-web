@@ -336,7 +336,7 @@ export const resetPassword = async (newPassword, token = null) => {
   }
 };
 
-export const logout = async () => {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
-};
+// export const logout = async () => {
+//   const { error } = await supabase.auth.signOut();
+//   if (error) throw error;
+// };

@@ -1,15 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogOut, User, Shield, Calendar } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import userService from '@/services/user/userService';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated, usuario, logout, isAdmin } = useAuth();
+  const { isAuthenticated, logout, isAdmin } = useAuth();
+  const [user, setUser] = useState(null)
 
   const isActive = (path) => location.pathname === path ? 'text-[#00D166]' : 'text-white hover:text-[#00D166]';
   const closeMenu = () => setIsMenuOpen(false);
+
+  useEffect(() => {
+    if (isAuthenticated) infoUser();
+  }, [isAuthenticated])
+
+  const infoUser = async () => {
+    try {
+      const r = await userService.getUsersMe()
+      setUser(r.data)
+      console.log(r)
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   console.log("Header rendering, current path:", location.pathname);
 
@@ -59,13 +75,13 @@ const Header = () => {
 
                 <Link to="/user" className="flex items-center gap-2 text-sm hover:text-[#00D166] transition-colors group">
                   <div className="w-8 h-8 rounded-full bg-[#00D166]/20 flex items-center justify-center text-[#00D166] group-hover:bg-[#00D166] group-hover:text-[#0E3A2F] transition-all overflow-hidden">
-                    {usuario?.foto_perfil_url ? (
-                       <img src={usuario.foto_perfil_url} alt="User" className="w-full h-full object-cover" />
+                    {user?.user_avatars ? (
+                       <img src={user.user_avatars} alt="User" className="w-full h-full object-cover" />
                     ) : (
                        <User size={16} />
                     )}
                   </div>
-                  <span className="font-semibold">{usuario?.nome?.split(' ')[0]}</span>
+                  <span className="font-semibold">{user?.nome?.split(' ')[0]}</span>
                 </Link>
                 
                 <button 
@@ -108,15 +124,15 @@ const Header = () => {
                 <>
                   <div className="flex items-center gap-3 mb-4 px-2">
                      <div className="w-10 h-10 rounded-full bg-[#00D166]/20 flex items-center justify-center text-[#00D166] overflow-hidden">
-                        {usuario?.foto_perfil_url ? (
-                           <img src={usuario.foto_perfil_url} alt="User" className="w-full h-full object-cover" />
+                        {user?.user_avatars ? (
+                           <img src={user.user_avatars} alt="User" className="w-full h-full object-cover" />
                         ) : (
                            <User size={20} />
                         )}
                      </div>
                      <div>
-                       <p className="font-bold">{usuario?.nome}</p>
-                       <p className="text-xs text-gray-400">{usuario?.email}</p>
+                       <p className="font-bold">{user?.nome}</p>
+                       <p className="text-xs text-gray-400">{user?.email}</p>
                      </div>
                   </div>
                   
