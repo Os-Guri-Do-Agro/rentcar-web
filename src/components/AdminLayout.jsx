@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Car, Users, Calendar, 
   LogOut, Menu, X, FileText, 
-  DollarSign, Shield, Mail, Layers, MessageSquare, Activity
+  DollarSign, Shield, Mail, Layers, MessageSquare, Newspaper
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminMode } from '@/context/AdminModeContext';
@@ -25,6 +25,7 @@ const AdminLayout = () => {
     { to: "/admin/precos-carros", icon: DollarSign, label: "Preços dos Carros" },
     { to: "/admin/reservas", icon: Calendar, label: "Reservas" },
     { to: "/admin/clientes", icon: Users, label: "Clientes" },
+    { to: "/admin/blog", icon: Newspaper, label: "Blog" },
     
     // CMS & Content
     { to: "/admin/secoes", icon: Layers, label: "Seções Home" },
@@ -35,7 +36,6 @@ const AdminLayout = () => {
     // System
     // Removed Configurações link as requested
     { to: "/admin/logs", icon: Shield, label: "Logs de Sistema" },
-    { to: "/admin/diagnostico", icon: Activity, label: "Diagnóstico" },
   ];
 
   console.log("[AdminLayout] Navigation menu updated - Configurações removed");

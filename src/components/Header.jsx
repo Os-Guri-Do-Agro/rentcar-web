@@ -53,7 +53,7 @@ const Header = () => {
             <Link to="/locacao-particular" className={isActive('/locacao-particular')}>Info Particular</Link>
             <Link to="/termos-regras" className={isActive('/termos-regras')}>Termos</Link>
             <Link to="/sobre" className={isActive('/sobre')}>Sobre</Link>
-            <Link to="/contato" className={isActive('/contato')}>Contato</Link>
+            <Link to="/blog" className={isActive('/blog')}>Blog</Link>
           </nav>
 
           <div className="hidden lg:flex items-center gap-4">
@@ -120,7 +120,7 @@ const Header = () => {
             <Link to="/locacao-particular" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Info Particular</Link>
             <Link to="/termos-regras" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Termos</Link>
             <Link to="/sobre" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Sobre</Link>
-            <Link to="/contato" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Contato</Link>
+            <Link to="/blog" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Blog</Link>
             <Link to="/privacidade" className="block py-2 px-4 hover:bg-white/5 text-sm text-gray-400" onClick={closeMenu}>Política de Privacidade</Link>
             <Link to="/termos-de-uso" className="block py-2 px-4 hover:bg-white/5 text-sm text-gray-400" onClick={closeMenu}>Termos de Uso</Link>
             

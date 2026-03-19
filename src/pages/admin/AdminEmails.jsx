@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import { Loader2, Save, RotateCcw, Mail } from 'lucide-react';
+import TiptapEditor from '@/components/admin/TiptapEditor';
 import { getTemplates, updateTemplate } from '@/services/emailTemplateService';
 import EmailPreview from '@/components/EmailPreview';
 import { useToast } from '@/components/ui/use-toast';
@@ -56,15 +55,6 @@ const AdminEmails = () => {
         }
     };
 
-    const modules = {
-        toolbar: [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'link'],
-            [{'list': 'ordered'}, {'list': 'bullet'}],
-            ['clean']
-        ],
-    };
-
     if (loading) return <div className="p-10 text-center"><Loader2 className="animate-spin inline text-[#00D166]"/></div>;
 
     const currentTemplate = templates.find(t => t.tipo === selectedType);
@@ -114,13 +104,7 @@ const AdminEmails = () => {
 
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">Corpo do E-mail</label>
-                            <ReactQuill 
-                                theme="snow" 
-                                value={form.corpo} 
-                                onChange={c => setForm({...form, corpo: c})} 
-                                modules={modules}
-                                className="h-[300px] mb-12"
-                            />
+                            <TiptapEditor value={form.corpo} onChange={c => setForm({...form, corpo: c})} />
                         </div>
 
                         <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-800">

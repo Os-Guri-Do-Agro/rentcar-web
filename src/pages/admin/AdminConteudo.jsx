@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import { Loader2, Save, RotateCcw } from 'lucide-react';
+import TiptapEditor from '@/components/admin/TiptapEditor';
 import { getAllConteudo, updateConteudo } from '@/services/conteudoService';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -76,16 +75,6 @@ const AdminConteudo = () => {
         }
     };
 
-    const modules = {
-        toolbar: [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-            [{'list': 'ordered'}, {'list': 'bullet'}],
-            ['link'],
-            ['clean']
-        ],
-    };
-
     if (loading) return <div className="p-10 text-center"><Loader2 className="animate-spin inline text-[#0E3A2F]"/></div>;
 
     return (
@@ -134,13 +123,7 @@ const AdminConteudo = () => {
 
                     <div className="mb-4">
                         <label className="block text-sm font-bold text-gray-700 mb-1">Conteúdo</label>
-                        <ReactQuill 
-                            theme="snow" 
-                            value={form.conteudo} 
-                            onChange={c => setForm({...form, conteudo: c})} 
-                            modules={modules}
-                            className="h-[420px] mb-12"
-                        />
+                        <TiptapEditor value={form.conteudo} onChange={c => setForm({...form, conteudo: c})} />
                     </div>
                 </div>
             </div>

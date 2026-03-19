@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -27,6 +27,8 @@ import TermsAndRules from '@/pages/TermsAndRules';
 import Location from '@/pages/Location';
 import NotFound from '@/pages/NotFound';
 import Contato from '@/pages/Contato';
+import Blog from '@/pages/Blog';
+import BlogDetalhe from '@/pages/BlogDetalhe';
 import LocacaoCorporativa from '@/pages/LocacaoCorporativa';
 import TermosDeUso from '@/pages/TermosDeUso';
 import Privacidade from '@/pages/Privacidade';
@@ -60,6 +62,9 @@ import AdminDetalhesCliente from '@/pages/admin/AdminDetalhesCliente';
 import AdminIntegrations from '@/pages/admin/AdminIntegrations';
 import AdminLogs from '@/pages/admin/AdminLogs'; 
 import AdminCarrosDestaque from '@/pages/admin/AdminCarrosDestaque';
+import AdminBlog from '@/pages/admin/AdminBlog';
+import AdminBlogNovo from '@/pages/admin/AdminBlogNovo';
+import AdminBlogEditar from '@/pages/admin/AdminBlogEditar';
 import AdminEditarPrecosCarro from '@/pages/admin/AdminEditarPrecosCarro';
 import AdminAvaliacoes from '@/pages/admin/AdminAvaliacoes';
 import AdminSecoes from '@/pages/admin/AdminSecoes';
@@ -70,6 +75,7 @@ import AdminCarPricing from '@/pages/admin/AdminCarPricing';
 
 function App() {
   const { usuario, isAdmin } = useAuth();
+  const { pathname } = useLocation();
   useScrollToTop();
 
   return (
@@ -99,6 +105,8 @@ function App() {
                 <Route path="/localizacao" element={<Location />} />
                 <Route path="/sobre" element={<About />} />
                 <Route path="/contato" element={<Contato />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:id" element={<BlogDetalhe />} />
                 
                 {/* Legal Pages */}
                 <Route path="/termos-de-uso" element={<TermosDeUso />} />
@@ -140,6 +148,9 @@ function App() {
                   <Route path="cliente/:clienteId" element={<AdminDetalhesCliente />} />
 
                   {/* CMS & Config */}
+                  <Route path="blog" element={<AdminBlog />} />
+                  <Route path="blog/novo" element={<AdminBlogNovo />} />
+                  <Route path="blog/editar/:id" element={<AdminBlogEditar />} />
                   <Route path="avaliacoes" element={<AdminAvaliacoes />} />
                   <Route path="secoes" element={<AdminSecoes />} />
                   <Route path="conteudo" element={<AdminConteudo />} />
@@ -164,7 +175,7 @@ function App() {
               </Routes>
             </main>
 
-            {!isAdmin && <Footer />}
+            {!pathname.startsWith('/admin') && <Footer />}
             <FloatingWhatsApp />
             <CookieBanner />
             <Toaster />
