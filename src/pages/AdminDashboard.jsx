@@ -1,22 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Car, Calendar, DollarSign, Settings, TrendingUp, ArrowRight, Loader2 } from 'lucide-react';
-import { getDashboardStats } from '@/services/adminService';
+import ReactECharts from 'echarts-for-react';
+import { Users, Car, Calendar, Settings, TrendingUp, ArrowRight, Loader2, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import dashboardService from '@/services/dashboard/dashboard-service';
 
-const StatCard = ({ title, value, icon: Icon, color, link }) => (
-  <motion.div 
+const StatCard = ({ title, value, icon: Icon, color, link, sub }) => (
+  <motion.div
     whileHover={{ y: -5 }}
-    className="bg-white p-6 rounded-xl shadow-md border-l-4 border-gray-100 relative overflow-hidden"
+    className="bg-white p-6 rounded-xl shadow-md border-l-4 relative overflow-hidden"
     style={{ borderLeftColor: color }}
   >
-    <div className="flex justify-between items-start mb-4">
+    <div className="flex justify-between items-start mb-3">
       <div>
         <p className="text-gray-500 text-sm font-medium uppercase tracking-wide">{title}</p>
         <h3 className="text-3xl font-bold text-gray-900 mt-1">{value}</h3>
+        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
       </div>
-      <div className="p-3 rounded-lg bg-opacity-10" style={{ backgroundColor: `${color}20`, color: color }}>
+      <div className="p-3 rounded-lg" style={{ backgroundColor: `${color}20`, color }}>
         <Icon size={24} />
       </div>
     </div>
@@ -36,14 +38,10 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const data = await getDashboardStats();
-        setStats(data);
-      } catch (error) {
-        toast({
-          title: "Erro ao carregar dados",
-          description: "Não foi possível buscar as estatísticas do painel.",
-          variant: "destructive"
-        });
+        const data = await dashboardService.getDashboard();
+        setStats(data.data);
+      } catch {
+        toast({ title: 'Erro ao carregar dados', description: 'Não foi possível buscar as estatísticas do painel.', variant: 'destructive' });
       } finally {
         setLoading(false);
       }
@@ -53,6 +51,67 @@ const AdminDashboard = () => {
 
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#00D166]" size={40} /></div>;
 
+  // --- Chart options ---
+
+  const carrosDonutOption = {
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    legend: { bottom: 0, textStyle: { fontSize: 12 } },
+    series: [{
+      type: 'pie', radius: ['50%', '75%'], avoidLabelOverlap: false,
+      label: { show: false },
+      data: [
+        { value: stats?.carros?.disponiveis || 0, name: 'Disponíveis', itemStyle: { color: '#00D166' } },
+        { value: stats?.carros?.indisponiveis || 0, name: 'Indisponíveis', itemStyle: { color: '#F87171' } },
+      ],
+    }],
+  };
+
+  const reservasTipoBarOption = {
+    tooltip: { trigger: 'axis' },
+    grid: { left: 16, right: 16, bottom: 24, top: 16, containLabel: true },
+    xAxis: { type: 'category', data: ['Particular', 'Motorista', 'Corporativo'], axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', minInterval: 1 },
+    series: [{
+      type: 'bar', barMaxWidth: 48,
+      data: [
+        { value: stats?.reservasPorTipo?.particular || 0, itemStyle: { color: '#3B82F6' } },
+        { value: stats?.reservasPorTipo?.motorista || 0, itemStyle: { color: '#F59E0B' } },
+        { value: stats?.reservasPorTipo?.corporativo || 0, itemStyle: { color: '#8B5CF6' } },
+      ],
+    }],
+  };
+
+  const reservasStatusOption = {
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    legend: { bottom: 0, textStyle: { fontSize: 12 } },
+    series: [{
+      type: 'pie', radius: ['50%', '75%'], avoidLabelOverlap: false,
+      label: { show: false },
+      data: [
+        { value: stats?.reservas?.confirmadas || 0, name: 'Confirmadas', itemStyle: { color: '#00D166' } },
+        { value: stats?.reservas?.pendentes || 0, name: 'Pendentes', itemStyle: { color: '#F59E0B' } },
+        { value: stats?.reservas?.canceladas || 0, name: 'Canceladas', itemStyle: { color: '#F87171' } },
+      ],
+    }],
+  };
+
+  const carrosMaisReservadosOption = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 16, right: 24, bottom: 8, top: 8, containLabel: true },
+    xAxis: { type: 'value', minInterval: 1 },
+    yAxis: {
+      type: 'category',
+      data: (stats?.carrosMaisReservados || []).map(c => c.nome.length > 22 ? c.nome.slice(0, 22) + '…' : c.nome).reverse(),
+      axisLabel: { fontSize: 11 },
+    },
+    series: [{
+      type: 'bar', barMaxWidth: 32,
+      data: (stats?.carrosMaisReservados || []).map(c => c.totalReservas).reverse(),
+      itemStyle: { color: '#00D166', borderRadius: [0, 4, 4, 0] },
+      label: { show: true, position: 'right', fontSize: 11 },
+    }],
+  };
+
   return (
     <div className="p-6 md:p-10 bg-gray-50 min-h-screen">
       <div className="mb-8">
@@ -60,114 +119,59 @@ const AdminDashboard = () => {
         <p className="text-gray-500 mt-1">Visão geral do sistema e atalhos de gerenciamento.</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <StatCard 
-          title="Total de Usuários" 
-          value={stats?.stats?.totalUsers || 0} 
-          icon={Users} 
-          color="#3B82F6" 
-          link="/admin/usuarios"
-        />
-        <StatCard 
-          title="Veículos na Frota" 
-          value={stats?.stats?.totalCars || 0} 
-          icon={Car} 
-          color="#00D166" 
-          link="/admin/carros"
-        />
-        <StatCard 
-          title="Reservas Totais" 
-          value={stats?.stats?.totalReservas || 0} 
-          icon={Calendar} 
-          color="#F59E0B" 
-          link="/admin/reservas"
-        />
-        <StatCard 
-          title="Faturamento (Mês)" 
-          value="R$ --" 
-          icon={DollarSign} 
-          color="#10B981" 
-        />
+      {/* Row 1 — Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard title="Clientes" value={stats?.clientes?.total || 0} icon={Users} color="#3B82F6" link="/admin/usuarios" sub={`+${stats?.clientes?.novosMes || 0} este mês`} />
+        <StatCard title="Veículos na Frota" value={stats?.carros?.total || 0} icon={Car} color="#00D166" link="/admin/carros" sub={`${stats?.carros?.disponiveis || 0} disponíveis`} />
+        <StatCard title="Reservas" value={stats?.reservas?.total || 0} icon={Calendar} color="#F59E0B" link="/admin/reservas" sub={`${stats?.reservas?.pendentes || 0} pendentes · ${stats?.reservas?.recentes || 0} recentes`} />
+        <StatCard title="Posts do Blog" value={stats?.blog?.posts || 0} icon={FileText} color="#8B5CF6" link="/admin/blog" sub={`${stats?.blog?.postsAtivos || 0} ativos`} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Activity / Reservations */}
+
+
+      {/* Row 3 — Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Carros mais reservados */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-[#0E3A2F]">Reservas Recentes</h2>
-            <Link to="/admin/reservas" className="text-[#00D166] text-sm font-bold hover:underline">Ver todas</Link>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-gray-100 text-gray-500 text-xs uppercase">
-                  <th className="pb-3 font-semibold">Cliente</th>
-                  <th className="pb-3 font-semibold">Veículo</th>
-                  <th className="pb-3 font-semibold">Data</th>
-                  <th className="pb-3 font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {stats?.recentReservas?.map(res => (
-                  <tr key={res.id} className="group hover:bg-gray-50 transition-colors">
-                    <td className="py-4">
-                      <div className="font-medium text-gray-900">{res.users?.nome || 'Usuário'}</div>
-                      <div className="text-xs text-gray-400">{res.users?.email}</div>
-                    </td>
-                    <td className="py-4 text-gray-700">{res.cars?.nome || 'Carro removido'}</td>
-                    <td className="py-4 text-gray-600 text-sm">{new Date(res.created_at).toLocaleDateString('pt-BR')}</td>
-                    <td className="py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase
-                        ${res.status === 'confirmada' ? 'bg-green-100 text-green-800' : 
-                          res.status === 'cancelada' ? 'bg-red-100 text-red-800' : 
-                          'bg-yellow-100 text-yellow-800'}`}>
-                        {res.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {(!stats?.recentReservas || stats.recentReservas.length === 0) && (
-                   <tr><td colSpan="4" className="text-center py-6 text-gray-500">Nenhuma reserva recente.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <h2 className="text-lg font-bold text-[#0E3A2F] mb-4">Carros Mais Reservados</h2>
+          <ReactECharts option={carrosMaisReservadosOption} style={{ height: 220 }} />
         </div>
 
-        {/* Quick Actions */}
+        {/* Frota donut */}
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-[#0E3A2F] mb-6">Ações Rápidas</h2>
-          <div className="space-y-4">
+          <h2 className="text-lg font-bold text-[#0E3A2F] mb-2">Disponibilidade da Frota</h2>
+          <ReactECharts option={carrosDonutOption} style={{ height: 220 }} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Reservas por tipo */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-lg font-bold text-[#0E3A2F] mb-4">Reservas por Tipo</h2>
+          <ReactECharts option={reservasTipoBarOption} style={{ height: 200 }} />
+        </div>
+
+        {/* Reservas por status */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-lg font-bold text-[#0E3A2F] mb-2">Status das Reservas</h2>
+          <ReactECharts option={reservasStatusOption} style={{ height: 200 }} />
+        </div>
+
+        {/* Ações Rápidas */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-lg font-bold text-[#0E3A2F] mb-4">Ações Rápidas</h2>
+          <div className="space-y-3">
             <Link to="/admin/car/new" className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 hover:border-[#00D166] transition-all group">
-               <div className="bg-green-100 text-[#00D166] p-2 rounded-lg group-hover:bg-[#00D166] group-hover:text-white transition-colors">
-                 <Car size={20} />
-               </div>
-               <div>
-                 <h4 className="font-bold text-gray-800">Adicionar Veículo</h4>
-                 <p className="text-xs text-gray-500">Cadastrar novo carro na frota</p>
-               </div>
+              <div className="bg-green-100 text-[#00D166] p-2 rounded-lg group-hover:bg-[#00D166] group-hover:text-white transition-colors"><Car size={18} /></div>
+              <div><h4 className="font-bold text-gray-800 text-sm">Adicionar Veículo</h4><p className="text-xs text-gray-500">Cadastrar novo carro na frota</p></div>
             </Link>
-
             <Link to="/admin/whatsapp-config" className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 hover:border-[#00D166] transition-all group">
-               <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                 <Settings size={20} />
-               </div>
-               <div>
-                 <h4 className="font-bold text-gray-800">Configurar Contato</h4>
-                 <p className="text-xs text-gray-500">Alterar WhatsApp e e-mail</p>
-               </div>
+              <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors"><Settings size={18} /></div>
+              <div><h4 className="font-bold text-gray-800 text-sm">Configurar Contato</h4><p className="text-xs text-gray-500">Alterar WhatsApp e e-mail</p></div>
             </Link>
-
             <Link to="/admin/precos-carros" className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 hover:border-[#00D166] transition-all group">
-               <div className="bg-purple-100 text-purple-600 p-2 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                 <TrendingUp size={20} />
-               </div>
-               <div>
-                 <h4 className="font-bold text-gray-800">Gerenciar Preços</h4>
-                 <p className="text-xs text-gray-500">Ajustar valores da diária</p>
-               </div>
+              <div className="bg-purple-100 text-purple-600 p-2 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors"><TrendingUp size={18} /></div>
+              <div><h4 className="font-bold text-gray-800 text-sm">Gerenciar Preços</h4><p className="text-xs text-gray-500">Ajustar valores da diária</p></div>
             </Link>
           </div>
         </div>

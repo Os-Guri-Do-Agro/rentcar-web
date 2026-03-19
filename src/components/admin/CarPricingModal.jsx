@@ -10,26 +10,23 @@ import { cn } from '@/lib/utils';
 
 const DEFAULTS = {
     particular: {
-        preco_diaria_particular: '', preco_km_extra_particular: '', km_inclusos_particular: '',
-        particular_diario_livre: '', particular_diario_60km: '', particular_diario_100km: '', particular_diario_120km: '',
         particular_semanal_1500: '', particular_semanal_2000: '', particular_semanal_3000: '',
-        particular_trimestral: '', particular_semestral: '',
-        particular_franquia_1000km: '', particular_franquia_1500km: '', particular_franquia_2000km: '',
-        particular_franquia_2500km: '', particular_franquia_3000km: '', particular_franquia_5000km: '',
+        particular_trimestral_1000: '', particular_trimestral_1500: '', particular_trimestral_2000: '',
+        particular_semestral_1000: '', particular_semestral_1500: '', particular_semestral_2000: '',
+        particular_anual_1000: '', particular_anual_1500: '', particular_anual_2000: '',
+        particular_km_extra: '',
     },
     motorista: {
-        preco_diaria_motorista: '', preco_km_extra_motorista: '', km_inclusos_motorista: '',
-        motorista_diario_livre: '', motorista_diario_60km: '', motorista_diario_100km: '', motorista_diario_120km: '',
-        motorista_semanal: '', motorista_semanal_1250km: '', motorista_semanal_1500km: '',
-        motorista_trimestral: '', motorista_trimestral_2500: '', motorista_trimestral_5000: '', motorista_trimestral_6000: '',
-        motorista_semestral: '', motorista_semestral_2500: '', motorista_semestral_5000: '', motorista_semestral_6000: '',
+        motorista_trimestral_2500: '', motorista_trimestral_5000: '', motorista_trimestral_6000: '',
+        motorista_semestral_2500: '', motorista_semestral_5000: '', motorista_semestral_6000: '',
         motorista_anual_2500: '', motorista_anual_5000: '', motorista_anual_6000: '',
-        motorista_franquia_2500km: '', motorista_franquia_5000km: '', motorista_franquia_6000km: '',
+        motorista_km_extra: '',
     },
     corporativo: {
-        corporativo_diario_livre: '', corporativo_diario_60km: '', corporativo_diario_100km: '', corporativo_diario_120km: '',
-        corporativo_trimestral: '', corporativo_semestral: '',
-        corporativo_franquia_1000km: '', corporativo_franquia_2500km: '', corporativo_franquia_5000km: '',
+        corporativo_trimestral_1000: '', corporativo_trimestral_2500: '', corporativo_trimestral_5000: '',
+        corporativo_semestral_1000: '', corporativo_semestral_2500: '', corporativo_semestral_5000: '',
+        corporativo_anual_1000: '', corporativo_anual_2500: '', corporativo_anual_5000: '',
+        corporativo_km_extra: '',
     },
 };
 
@@ -141,111 +138,89 @@ const CarPricingModal = ({ car, isOpen, onClose, onUpdate, initialRentalType = '
                 {loading ? (
                     <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#00D166]" size={40} /></div>
                 ) : (
-                    <Tabs defaultValue="diario" key={activeRentalType}>
+                    <Tabs defaultValue={activeRentalType === 'particular' ? 'semanal' : 'trimestral'} key={activeRentalType}>
                         <TabsList className="flex flex-wrap h-auto bg-gray-100 p-1 gap-1 mb-2">
-                            <TabsTrigger value="diario" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Diário</TabsTrigger>
-                            {activeRentalType !== 'corporativo' && <TabsTrigger value="semanal" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Semanal</TabsTrigger>}
+                            {activeRentalType === 'particular' && <TabsTrigger value="semanal" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Semanal</TabsTrigger>}
                             <TabsTrigger value="trimestral" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Trimestral / Semestral</TabsTrigger>
-                            {activeRentalType !== 'motorista' && <TabsTrigger value="franquia" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Franquia</TabsTrigger>}
-                            {activeRentalType === 'motorista' && <TabsTrigger value="anual" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Anual / Franquia</TabsTrigger>}
+                            <TabsTrigger value="anual" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Anual</TabsTrigger>
                         </TabsList>
 
-                        {/* DIÁRIO */}
-                        <TabsContent value="diario" className="space-y-2 pt-2">
-                            {activeRentalType === 'particular' && (
-                                <>
-                                    <PriceField label="Diária Particular" field="preco_diaria_particular" value={f.preco_diaria_particular} onChange={handleFieldChange} />
-                                    <PriceField label="Preço KM Extra" field="preco_km_extra_particular" value={f.preco_km_extra_particular} onChange={handleFieldChange} />
-                                    <PriceField label="KM Inclusos" field="km_inclusos_particular" value={f.km_inclusos_particular} onChange={handleFieldChange} isNumber />
-                                </>
-                            )}
-                            {activeRentalType === 'motorista' && (
-                                <>
-                                    <PriceField label="Diária Motorista" field="preco_diaria_motorista" value={f.preco_diaria_motorista} onChange={handleFieldChange} />
-                                    <PriceField label="Preço KM Extra" field="preco_km_extra_motorista" value={f.preco_km_extra_motorista} onChange={handleFieldChange} />
-                                    <PriceField label="KM Inclusos" field="km_inclusos_motorista" value={f.km_inclusos_motorista} onChange={handleFieldChange} isNumber />
-                                </>
-                            )}
-                            <PriceField label="Diário Livre" field={`${activeRentalType}_diario_livre`} value={f[`${activeRentalType}_diario_livre`]} onChange={handleFieldChange} />
-                            <PriceField label="Diário 60km" field={`${activeRentalType}_diario_60km`} value={f[`${activeRentalType}_diario_60km`]} onChange={handleFieldChange} />
-                            <PriceField label="Diário 100km" field={`${activeRentalType}_diario_100km`} value={f[`${activeRentalType}_diario_100km`]} onChange={handleFieldChange} />
-                            <PriceField label="Diário 120km" field={`${activeRentalType}_diario_120km`} value={f[`${activeRentalType}_diario_120km`]} onChange={handleFieldChange} />
-                        </TabsContent>
-
-                        {/* SEMANAL */}
+                        {/* SEMANAL (apenas particular) */}
                         {activeRentalType === 'particular' && (
                             <TabsContent value="semanal" className="space-y-2 pt-2">
+                                <PriceField label="Taxa por KM Extra (km excedidos)" field="particular_km_extra" value={f.particular_km_extra} onChange={handleFieldChange} />
                                 <PriceField label="Semanal 1500km" field="particular_semanal_1500" value={f.particular_semanal_1500} onChange={handleFieldChange} />
                                 <PriceField label="Semanal 2000km" field="particular_semanal_2000" value={f.particular_semanal_2000} onChange={handleFieldChange} />
                                 <PriceField label="Semanal 3000km" field="particular_semanal_3000" value={f.particular_semanal_3000} onChange={handleFieldChange} />
                             </TabsContent>
                         )}
-                        {activeRentalType === 'motorista' && (
-                            <TabsContent value="semanal" className="space-y-2 pt-2">
-                                <PriceField label="Semanal (livre)" field="motorista_semanal" value={f.motorista_semanal} onChange={handleFieldChange} />
-                                <PriceField label="Semanal 1250km" field="motorista_semanal_1250km" value={f.motorista_semanal_1250km} onChange={handleFieldChange} />
-                                <PriceField label="Semanal 1500km" field="motorista_semanal_1500km" value={f.motorista_semanal_1500km} onChange={handleFieldChange} />
-                            </TabsContent>
-                        )}
 
                         {/* TRIMESTRAL / SEMESTRAL */}
                         <TabsContent value="trimestral" className="space-y-2 pt-2">
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Trimestral</p>
-                            <PriceField label="Trimestral" field={`${activeRentalType}_trimestral`} value={f[`${activeRentalType}_trimestral`]} onChange={handleFieldChange} />
+                            {activeRentalType === 'particular' && (
+                                <>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Trimestral</p>
+                                    <PriceField label="Trimestral 1000km" field="particular_trimestral_1000" value={f.particular_trimestral_1000} onChange={handleFieldChange} />
+                                    <PriceField label="Trimestral 1500km" field="particular_trimestral_1500" value={f.particular_trimestral_1500} onChange={handleFieldChange} />
+                                    <PriceField label="Trimestral 2000km" field="particular_trimestral_2000" value={f.particular_trimestral_2000} onChange={handleFieldChange} />
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Semestral</p>
+                                    <PriceField label="Semestral 1000km" field="particular_semestral_1000" value={f.particular_semestral_1000} onChange={handleFieldChange} />
+                                    <PriceField label="Semestral 1500km" field="particular_semestral_1500" value={f.particular_semestral_1500} onChange={handleFieldChange} />
+                                    <PriceField label="Semestral 2000km" field="particular_semestral_2000" value={f.particular_semestral_2000} onChange={handleFieldChange} />
+                                </>
+                            )}
                             {activeRentalType === 'motorista' && (
                                 <>
+                                    <PriceField label="Taxa por KM Extra (km excedidos)" field="motorista_km_extra" value={f.motorista_km_extra} onChange={handleFieldChange} />
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Trimestral</p>
                                     <PriceField label="Trimestral 2500km" field="motorista_trimestral_2500" value={f.motorista_trimestral_2500} onChange={handleFieldChange} />
                                     <PriceField label="Trimestral 5000km" field="motorista_trimestral_5000" value={f.motorista_trimestral_5000} onChange={handleFieldChange} />
                                     <PriceField label="Trimestral 6000km" field="motorista_trimestral_6000" value={f.motorista_trimestral_6000} onChange={handleFieldChange} />
-                                </>
-                            )}
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Semestral</p>
-                            <PriceField label="Semestral" field={`${activeRentalType}_semestral`} value={f[`${activeRentalType}_semestral`]} onChange={handleFieldChange} />
-                            {activeRentalType === 'motorista' && (
-                                <>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Semestral</p>
                                     <PriceField label="Semestral 2500km" field="motorista_semestral_2500" value={f.motorista_semestral_2500} onChange={handleFieldChange} />
                                     <PriceField label="Semestral 5000km" field="motorista_semestral_5000" value={f.motorista_semestral_5000} onChange={handleFieldChange} />
                                     <PriceField label="Semestral 6000km" field="motorista_semestral_6000" value={f.motorista_semestral_6000} onChange={handleFieldChange} />
                                 </>
                             )}
+                            {activeRentalType === 'corporativo' && (
+                                <>
+                                    <PriceField label="Taxa por KM Extra (km excedidos)" field="corporativo_km_extra" value={f.corporativo_km_extra} onChange={handleFieldChange} />
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Trimestral</p>
+                                    <PriceField label="Trimestral 1000km" field="corporativo_trimestral_1000" value={f.corporativo_trimestral_1000} onChange={handleFieldChange} />
+                                    <PriceField label="Trimestral 2500km" field="corporativo_trimestral_2500" value={f.corporativo_trimestral_2500} onChange={handleFieldChange} />
+                                    <PriceField label="Trimestral 5000km" field="corporativo_trimestral_5000" value={f.corporativo_trimestral_5000} onChange={handleFieldChange} />
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Semestral</p>
+                                    <PriceField label="Semestral 1000km" field="corporativo_semestral_1000" value={f.corporativo_semestral_1000} onChange={handleFieldChange} />
+                                    <PriceField label="Semestral 2500km" field="corporativo_semestral_2500" value={f.corporativo_semestral_2500} onChange={handleFieldChange} />
+                                    <PriceField label="Semestral 5000km" field="corporativo_semestral_5000" value={f.corporativo_semestral_5000} onChange={handleFieldChange} />
+                                </>
+                            )}
                         </TabsContent>
 
-                        {/* FRANQUIA (particular / corporativo) */}
-                        {activeRentalType !== 'motorista' && (
-                            <TabsContent value="franquia" className="space-y-2 pt-2">
-                                {activeRentalType === 'particular' && (
-                                    <>
-                                        <PriceField label="Franquia 1000km" field="particular_franquia_1000km" value={f.particular_franquia_1000km} onChange={handleFieldChange} />
-                                        <PriceField label="Franquia 1500km" field="particular_franquia_1500km" value={f.particular_franquia_1500km} onChange={handleFieldChange} />
-                                        <PriceField label="Franquia 2000km" field="particular_franquia_2000km" value={f.particular_franquia_2000km} onChange={handleFieldChange} />
-                                        <PriceField label="Franquia 2500km" field="particular_franquia_2500km" value={f.particular_franquia_2500km} onChange={handleFieldChange} />
-                                        <PriceField label="Franquia 3000km" field="particular_franquia_3000km" value={f.particular_franquia_3000km} onChange={handleFieldChange} />
-                                        <PriceField label="Franquia 5000km" field="particular_franquia_5000km" value={f.particular_franquia_5000km} onChange={handleFieldChange} />
-                                    </>
-                                )}
-                                {activeRentalType === 'corporativo' && (
-                                    <>
-                                        <PriceField label="Franquia 1000km" field="corporativo_franquia_1000km" value={f.corporativo_franquia_1000km} onChange={handleFieldChange} />
-                                        <PriceField label="Franquia 2500km" field="corporativo_franquia_2500km" value={f.corporativo_franquia_2500km} onChange={handleFieldChange} />
-                                        <PriceField label="Franquia 5000km" field="corporativo_franquia_5000km" value={f.corporativo_franquia_5000km} onChange={handleFieldChange} />
-                                    </>
-                                )}
-                            </TabsContent>
-                        )}
-
-                        {/* ANUAL / FRANQUIA (motorista) */}
-                        {activeRentalType === 'motorista' && (
-                            <TabsContent value="anual" className="space-y-2 pt-2">
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Anual</p>
-                                <PriceField label="Anual 2500km" field="motorista_anual_2500" value={f.motorista_anual_2500} onChange={handleFieldChange} />
-                                <PriceField label="Anual 5000km" field="motorista_anual_5000" value={f.motorista_anual_5000} onChange={handleFieldChange} />
-                                <PriceField label="Anual 6000km" field="motorista_anual_6000" value={f.motorista_anual_6000} onChange={handleFieldChange} />
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Franquia</p>
-                                <PriceField label="Franquia 2500km" field="motorista_franquia_2500km" value={f.motorista_franquia_2500km} onChange={handleFieldChange} />
-                                <PriceField label="Franquia 5000km" field="motorista_franquia_5000km" value={f.motorista_franquia_5000km} onChange={handleFieldChange} />
-                                <PriceField label="Franquia 6000km" field="motorista_franquia_6000km" value={f.motorista_franquia_6000km} onChange={handleFieldChange} />
-                            </TabsContent>
-                        )}
+                        {/* ANUAL */}
+                        <TabsContent value="anual" className="space-y-2 pt-2">
+                            {activeRentalType === 'particular' && (
+                                <>
+                                    <PriceField label="Anual 1000km" field="particular_anual_1000" value={f.particular_anual_1000} onChange={handleFieldChange} />
+                                    <PriceField label="Anual 1500km" field="particular_anual_1500" value={f.particular_anual_1500} onChange={handleFieldChange} />
+                                    <PriceField label="Anual 2000km" field="particular_anual_2000" value={f.particular_anual_2000} onChange={handleFieldChange} />
+                                </>
+                            )}
+                            {activeRentalType === 'motorista' && (
+                                <>
+                                    <PriceField label="Anual 2500km" field="motorista_anual_2500" value={f.motorista_anual_2500} onChange={handleFieldChange} />
+                                    <PriceField label="Anual 5000km" field="motorista_anual_5000" value={f.motorista_anual_5000} onChange={handleFieldChange} />
+                                    <PriceField label="Anual 6000km" field="motorista_anual_6000" value={f.motorista_anual_6000} onChange={handleFieldChange} />
+                                </>
+                            )}
+                            {activeRentalType === 'corporativo' && (
+                                <>
+                                    <PriceField label="Anual 1000km" field="corporativo_anual_1000" value={f.corporativo_anual_1000} onChange={handleFieldChange} />
+                                    <PriceField label="Anual 2500km" field="corporativo_anual_2500" value={f.corporativo_anual_2500} onChange={handleFieldChange} />
+                                    <PriceField label="Anual 5000km" field="corporativo_anual_5000" value={f.corporativo_anual_5000} onChange={handleFieldChange} />
+                                </>
+                            )}
+                        </TabsContent>
                     </Tabs>
                 )}
 
