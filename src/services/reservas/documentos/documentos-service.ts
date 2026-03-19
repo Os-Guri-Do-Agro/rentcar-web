@@ -1,7 +1,11 @@
 import { handleError } from '@/utils/error.utils'
-import api from '../api'
+import api from '../../api'
 
-class authService {
+class documentosService {
+  private authHeader() {
+    return { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  }
+
   private async handleRequest<T>(
     request: Promise<{ data: T }>,
     errorMessage: string
@@ -16,20 +20,13 @@ class authService {
     }
   }
 
-  postLogin(data: any): Promise<any> {
+  getDocumentosByReservaId(id: string): Promise<any> {
     return this.handleRequest(
-      api.post('/auth/login', data),
-      'Erro ao fazer login'
-    )
-  }
-
-  postRegister(data: any): Promise<any> {
-    return this.handleRequest(
-      api.post('/auth/register', data),
-      'Erro ao fazer registro'
+      api.get(`/reservas/${id}/documents`, { headers: this.authHeader() }),
+      'Erro ao buscar documentos da reserva'
     )
   }
 
 }
 
-export default new authService()
+export default new documentosService()

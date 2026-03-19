@@ -1,8 +1,11 @@
 import { handleError } from '@/utils/error.utils'
 import api from '../api'
 
-const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ZDQ1ZWJkZS05OGQ5LTRlNmQtOTRhYy00ODk3YzhlZDE2NzciLCJ1c2VySWQiOiI2ZDQ1ZWJkZS05OGQ5LTRlNmQtOTRhYy00ODk3YzhlZDE2NzciLCJyb2xlIjoiYWRtaW4iLCJ1c2VyIjp7ImlkIjoiNmQ0NWViZGUtOThkOS00ZTZkLTk0YWMtNDg5N2M4ZWQxNjc3IiwiZW1haWwiOiJuaWNrY2FzdGVsYUBob3RtYWlsLmNvbSIsIm5vbWUiOiJuaWNvbGFzIiwiY3BmIjoiMDU3LjIwMS42NjEtMTQiLCJ0ZWxlZm9uZSI6Iig2NykgOTkxMzMtNjg2OCIsInJvbGUiOiJhZG1pbiJ9LCJpYXQiOjE3NzM3NjA3Mzh9.pr3__9WaiMUxluTaVNLBiaKFqP9R8Jv2r0__pxlQw_4'
 class reservasService {
+  private authHeader() {
+    return { Authorization: `Bearer ${localStorage.getItem('token')}` }
+  }
+
   private async handleRequest<T>(
     request: Promise<{ data: T }>,
     errorMessage: string
@@ -19,34 +22,57 @@ class reservasService {
 
   getReservas(): Promise<any> {
     return this.handleRequest(
-      api.get('/reservas', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }),
+      api.get('/reservas', { headers: this.authHeader() }),
       'Erro ao buscar reservas'
     )
   }
 
   getMyReservas(): Promise<any> {
     return this.handleRequest(
-      api.get('/reservas/my', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }), 
+      api.get('/reservas/my', { headers: this.authHeader() }),
       'Erro ao buscar as reservas do usuário logado'
     )
   }
 
   getReservasById(id: string): Promise<any> {
     return this.handleRequest(
-      api.get(`/reservas/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }),
+      api.get(`/reservas/${id}`, { headers: this.authHeader() }),
       'Erro ao buscar reserva'
+    )
+  }
+
+  patchStatusReserva(id: string, data: any): Promise<any> {
+    return this.handleRequest(
+      api.patch(`/reservas/${id}/status`, data, { headers: this.authHeader() }),
+      'Erro ao atualizar status da reserva'
+    )
+  }
+
+  patchCancelReserva(id: string): Promise<any> {
+    return this.handleRequest(
+      api.patch(`/reservas/${id}/cancel`, { headers: this.authHeader() }),
+      'Erro ao cancelar reserva'
+    )
+  }
+
+  postConfirmReserva(id: string): Promise<any> {
+    return this.handleRequest(
+      api.post(`/reservas/${id}/confirm`, { headers: this.authHeader() }),
+      'Erro ao confirmar reserva'
+    )
+  }
+
+  postRejectReserva(id: string, data: any): Promise<any> {
+    return this.handleRequest(
+      api.post(`/reservas/${id}/reject`, data, { headers: this.authHeader() }),
+      'Erro ao rejeitar reserva'
+    )
+  }
+
+  getHostoryReserva(id: string): Promise<any> {
+    return this.handleRequest(
+      api.get(`/reservas/${id}/history`, { headers: this.authHeader() }),
+      'Erro ao buscar histórico da reserva'
     )
   }
 

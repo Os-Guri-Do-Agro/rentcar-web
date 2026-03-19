@@ -7,7 +7,7 @@ import userService from '@/services/user/userService';
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated, logout, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const [user, setUser] = useState(null)
 
   const isActive = (path) => location.pathname === path ? 'text-[#00D166]' : 'text-white hover:text-[#00D166]';
@@ -25,6 +25,11 @@ const Header = () => {
     } catch (e) {
       console.error(e)
     }
+  }
+
+  const logout = () => {
+    localStorage.clear()
+    window.location.href = '/'
   }
 
   console.log("Header rendering, current path:", location.pathname);

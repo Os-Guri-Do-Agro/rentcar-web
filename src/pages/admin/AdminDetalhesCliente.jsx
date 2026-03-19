@@ -15,12 +15,11 @@ import {
     DialogDescription, DialogFooter 
 } from "@/components/ui/dialog";
 import { 
-    getClienteAvaliacao, 
-    updateClienteAvaliacao, 
     getClienteAvaliacaoHistorico,
     getClienteReservas 
 } from '@/services/clienteAvaliacaoService';
 import userService from '@/services/user/userService';
+import clientesService from '@/services/avaliacoes/clientes/clientes-service';
 
 const AdminDetalhesCliente = () => {
     const { clienteId } = useParams();
@@ -60,7 +59,8 @@ const AdminDetalhesCliente = () => {
 
         try {
 
-            const av = await userService.getUserById(clienteId);
+            const avRes = await clientesService.getClientesAvaliacao(clienteId);
+            const av = avRes?.data || null;
             setAvaliacao(av);
             if (av) {
                 setEditNota(av.nota);
@@ -83,16 +83,21 @@ const AdminDetalhesCliente = () => {
 
     const handleSaveAvaliacao = async () => {
         setSaving(true);
-        const result = await updateClienteAvaliacao(clienteId, editNota, editNotasPessoais, usuario.id);
-        
-        if (result.success) {
+        try {
+            const payload = { nota: editNota, notasPessoais: editNotasPessoais };
+            if (avaliacao) {
+                await clientesService.patchClientesAvaliacao(clienteId, avaliacao.id, payload);
+            } else {
+                await clientesService.postClientesAvaliacao(clienteId, payload);
+            }
             toast({ title: "Avaliação salva!", className: "bg-green-600 text-white" });
             setEditModalOpen(false);
-            fetchData(); // Refresh
-        } else {
-            toast({ title: "Erro", description: result.error, variant: "destructive" });
+            fetchData();
+        } catch (error) {
+            toast({ title: "Erro", description: error.message, variant: "destructive" });
+        } finally {
+            setSaving(false);
         }
-        setSaving(false);
     };
 
     const getStatusBadge = (reserva) => {

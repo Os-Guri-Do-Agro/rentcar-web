@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, ArrowLeft, Check, X, AlertTriangle, Loader2, Phone, FileText } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft, Check, X, AlertTriangle, Loader2, Phone, FileText, Eye, EyeOff } from 'lucide-react';
 import { register } from '@/services/authService';
 import { useToast } from '@/components/ui/use-toast';
 import { validateCPF, validatePhone, formatCPF, formatPhone } from '@/lib/validationUtils';
+import authService from '@/services/auth/auth-service';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -22,6 +23,8 @@ const Register = () => {
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   
   // Formatters
   const handleInputChange = (e) => {
@@ -37,11 +40,10 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    console.log("Validando formulário...");
 
     // Validations
     if (formData.password !== formData.confirmPassword) {
-        setErrorMsg("Senhas não conferem.");
+        setErrorMsg("Senhas não coincidem .");
         return;
     }
     const cpfVal = validateCPF(formData.cpf);
@@ -57,12 +59,14 @@ const Register = () => {
 
     setLoading(true);
     try {
-      console.log("Enviando registro...");
-      await register(formData.email, formData.password, formData.nome);
-      // Here you would typically update the user profile with CPF/Phone as well, 
-      // but register service might need update or we do a second call. 
-      // Assuming register handles basic auth and we prompt for profile completion or update it here if authService supported it.
-      // For this task, we assume success and redirect.
+        const data = {
+            email: formData.email,
+            senha: formData.password,
+            nome: formData.nome,
+            cpf: formData.cpf,
+            telefone: formData.phone
+        }
+      await authService.postRegister(data);
       
       toast({
         title: "Conta criada com sucesso!",
@@ -125,20 +129,26 @@ const Register = () => {
                         <label className="block text-sm font-bold text-gray-700 mb-1">Senha</label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-3 text-gray-400" size={18}/>
-                            <input name="password" type="password" required value={formData.password} onChange={handleInputChange} className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none"/>
+                            <input name="password" type={showPassword ? 'text' : 'password'} required value={formData.password} onChange={handleInputChange} className="w-full pl-10 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none"/>
+                            <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600">
+                                {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
+                            </button>
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Confirmar</label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-3 text-gray-400" size={18}/>
-                            <input name="confirmPassword" type="password" required value={formData.confirmPassword} onChange={handleInputChange} className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none"/>
+                            <input name="confirmPassword" type={showConfirm ? 'text' : 'password'} required value={formData.confirmPassword} onChange={handleInputChange} className="w-full pl-10 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none"/>
+                            <button type="button" onClick={() => setShowConfirm(p => !p)} className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600">
+                                {showConfirm ? <EyeOff size={16}/> : <Eye size={16}/>}
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <button type="submit" disabled={loading} className="w-full py-3 bg-[#00D166] text-[#0E3A2F] font-bold rounded-lg hover:bg-[#00F178] transition-all flex justify-center items-center gap-2">
-                    {loading && <Loader2 className="animate-spin" size={18}/>} Criar Conta
+                <button type="submit" disabled={loading} className="w-full py-3 bg-[#00D166] text-[#0E3A2F] font-bold rounded-lg hover:bg-[#00F178] transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                    {loading ? <><Loader2 className="animate-spin" size={18}/> Criando...</> : 'Criar Conta'}
                 </button>
             </form>
             

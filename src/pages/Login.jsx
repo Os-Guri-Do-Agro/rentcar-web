@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import authService from '@/services/auth/auth-service';
@@ -12,24 +12,16 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const { login, isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, login, isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      console.log("Login bem-sucedido (estado detectado)");
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      
-      if (redirectPath) {
-        localStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
-      } else {
-        navigate('/');
-      }
-    }
-  }, [isAuthenticated, loading, navigate]);
+    if (isAuthenticated && isAdmin) navigate('/admin')
+      if (isAuthenticated && !isAdmin) navigate('/frota') 
+  }, [isAuthenticated, navigate]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -57,9 +49,8 @@ const Login = () => {
 
     setIsSubmitting(true);
     try {
-        const res = await authService(email, password);
-        // If login throws, it goes to catch. If returns object, success.
-        localStorage.setItem('token', res.data.token);
+        const res = await authService.postLogin({email, password});
+        login(res.data.token);
         toast({
             title: "Login realizado com sucesso!",
             description: "Bem-vindo de volta à JL Rent a Car",
@@ -77,8 +68,6 @@ const Login = () => {
         setIsSubmitting(false);
     }
   };
-
-  if (loading) return null; 
 
   return (
     <>
@@ -158,19 +147,26 @@ const Login = () => {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#00D166] transition-colors" size={20} />
                   <input
                     id="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
                       setErrors({ ...errors, password: '' });
                     }}
-                    className={`w-full pl-11 pr-4 py-3 border-2 rounded-xl outline-none transition-all text-gray-900 ${
+                    className={`w-full pl-11 pr-10 py-3 border-2 rounded-xl outline-none transition-all text-gray-900 ${
                       errors.password 
                         ? 'border-red-500 focus:border-red-500' 
                         : 'border-gray-200 focus:border-[#00D166] hover:border-gray-300'
                     }`}
                     placeholder="••••••••"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#00D166] transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
                 <div className="flex justify-between items-start mt-2">
                     {errors.password ? (

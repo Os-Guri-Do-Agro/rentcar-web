@@ -183,7 +183,7 @@ const AdminCarPricing = () => {
                                         {car.imagem_url ? <img src={car.imagem_url} className="w-full h-full object-cover" alt={car.nome}/> : <Car className="m-auto mt-6 text-gray-300" size={32}/>}
                                     </div>
                                     <div className="text-center">
-                                        <h3 className="font-bold text-[#0E3A2F]">{car.marca} {car.nome}</h3>
+                                        <h3 className="font-bold text-[#0E3A2F]">{car.nome}</h3>
                                         <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-500 font-mono">{car.placa}</span>
                                     </div>
                                 </div>
