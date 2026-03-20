@@ -48,11 +48,11 @@ const ResumoPrecoSimulacao = ({
     };
 
     const getPlanLabel = (plan) => {
+        if (plan === 'diario') return 'Diário';
         if (plan === 'semanal') return 'Semanal (7 dias)';
         if (plan === 'trimestral') return 'Trimestral (90 dias)';
         if (plan === 'semestral') return 'Semestral (180 dias)';
         if (plan === 'anual') return 'Anual (365 dias)';
-        if (plan === 'franquia') return 'Pacote Mensal';
         return plan;
     };
 

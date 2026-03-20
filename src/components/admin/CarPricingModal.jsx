@@ -1,126 +1,241 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Car, User, Users, Building2 } from 'lucide-react';
-import carService from '@/services/cars/carService';
+import { Loader2, Car, User, Users, Building2, Plus, Trash2, Pencil, Check, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import carPlanosService from '@/services/cars/carPlanosService';
+import { CATEGORIAS, CATEGORIAS_POR_TIPO, KM_OPCOES } from '@/constants/carPlanos';
+import { parseCarPlanosResponse } from '@/utils/carPlanosHelpers';
 
-const DEFAULTS = {
-    particular: {
-        particular_semanal_1500: '', particular_semanal_2000: '', particular_semanal_3000: '',
-        particular_trimestral_1000: '', particular_trimestral_1500: '', particular_trimestral_2000: '',
-        particular_semestral_1000: '', particular_semestral_1500: '', particular_semestral_2000: '',
-        particular_anual_1000: '', particular_anual_1500: '', particular_anual_2000: '',
-        particular_km_extra: '',
-    },
-    motorista: {
-        motorista_trimestral_2500: '', motorista_trimestral_5000: '', motorista_trimestral_6000: '',
-        motorista_semestral_2500: '', motorista_semestral_5000: '', motorista_semestral_6000: '',
-        motorista_anual_2500: '', motorista_anual_5000: '', motorista_anual_6000: '',
-        motorista_km_extra: '',
-    },
-    corporativo: {
-        corporativo_trimestral_1000: '', corporativo_trimestral_2500: '', corporativo_trimestral_5000: '',
-        corporativo_semestral_1000: '', corporativo_semestral_2500: '', corporativo_semestral_5000: '',
-        corporativo_anual_1000: '', corporativo_anual_2500: '', corporativo_anual_5000: '',
-        corporativo_km_extra: '',
-    },
+const TIPO_TABS = [
+    { type: 'particular',  icon: User,      label: 'Particular',    colorClass: 'bg-blue-50 text-blue-700 border-blue-600' },
+    { type: 'motorista',   icon: Users,     label: 'Motorista App', colorClass: 'bg-green-50 text-green-700 border-green-600' },
+    { type: 'corporativo', icon: Building2, label: 'Corporativo',   colorClass: 'bg-purple-50 text-purple-700 border-purple-600' },
+];
+
+const PlanoForm = ({ initial, activeCategoria, onSave, onCancel, saving }) => {
+    const defaultForm = { categoria: activeCategoria, km_franquia: 0, km_custom: '', preco: '', ativo: true };
+    const [form, setForm] = useState(initial ?? defaultForm);
+    const isCustomKm = !KM_OPCOES.some(o => o.value === Number(form.km_franquia)) || form._useCustom;
+    const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+    const effectiveKm = isCustomKm ? Number(form.km_custom || 0) : Number(form.km_franquia);
+
+    const handleSubmit = () => {
+        if (!form.preco || Number(form.preco) <= 0) return;
+        onSave({ categoria: form.categoria, km_franquia: effectiveKm, preco: Number(form.preco), ativo: form.ativo });
+    };
+
+    return (
+        <div className="border rounded-xl p-4 bg-gray-50 space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+                <div>
+                    <Label className="text-xs text-gray-500 mb-1 block">Categoria</Label>
+                    <select
+                        value={form.categoria}
+                        onChange={e => set('categoria', e.target.value)}
+                        className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-[#00D166] outline-none"
+                    >
+                        {CATEGORIAS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <Label className="text-xs text-gray-500 mb-1 block">Franquia KM</Label>
+                    <select
+                        value={isCustomKm ? 'custom' : form.km_franquia}
+                        onChange={e => {
+                            if (e.target.value === 'custom') { set('_useCustom', true); }
+                            else { set('km_franquia', Number(e.target.value)); set('_useCustom', false); }
+                        }}
+                        className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-[#00D166] outline-none"
+                    >
+                        {KM_OPCOES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        <option value="custom">Personalizado</option>
+                    </select>
+                    {isCustomKm && (
+                        <Input type="number" placeholder="KM" value={form.km_custom}
+                            onChange={e => set('km_custom', e.target.value)} className="mt-2 h-9" />
+                    )}
+                </div>
+                <div>
+                    <Label className="text-xs text-gray-500 mb-1 block">Preço (R$)</Label>
+                    <Input type="number" placeholder="0,00" value={form.preco}
+                        onChange={e => set('preco', e.target.value)} className="h-9" />
+                </div>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+                <button
+                    type="button"
+                    onClick={() => set('ativo', !form.ativo)}
+                    className={cn('flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors',
+                        form.ativo ? 'border-green-400 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-400')}
+                >
+                    {form.ativo ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                    {form.ativo ? 'Ativo' : 'Inativo'}
+                </button>
+                <div className="flex gap-2">
+                    <button onClick={onCancel} disabled={saving}
+                        className="px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100 disabled:opacity-50">
+                        Cancelar
+                    </button>
+                    <button onClick={handleSubmit} disabled={saving || !form.preco || Number(form.preco) <= 0}
+                        className="px-4 py-1.5 bg-[#0E3A2F] text-white rounded-lg text-sm font-bold hover:bg-[#0a2a22] disabled:opacity-50 flex items-center gap-2">
+                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 };
 
-const buildApiPayload = (pricing) => {
-    const n = (v) => Number(v || 0);
-    const mapSection = (section) => Object.fromEntries(Object.entries(section).map(([k, v]) => [k, n(v)]));
-    return {
-        particular: mapSection(pricing.particular),
-        motorista: mapSection(pricing.motorista),
-        corporativo: mapSection(pricing.corporativo),
-    };
+const PlanoRow = ({ plano, onToggle, onEdit, onDelete, isProcessing }) => {
+    const kmLabel = plano.km_franquia === 0 ? 'KM Livre' : `${Number(plano.km_franquia).toLocaleString('pt-BR')} KM`;
+    return (
+        <div className={cn('flex items-center justify-between p-3 rounded-lg border bg-white transition-opacity',
+            !plano.ativo && 'opacity-55', isProcessing && 'pointer-events-none')}>
+            <div className="flex items-center gap-4">
+                <span className="text-sm font-mono text-gray-500">{kmLabel}</span>
+                <span className="font-bold text-[#0E3A2F] text-base">
+                    R$ {Number(plano.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+                {!plano.ativo && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 border border-gray-200 px-1.5 py-0.5 rounded">
+                        Inativo
+                    </span>
+                )}
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+                <button onClick={() => onToggle(plano)} title={plano.ativo ? 'Desativar' : 'Ativar'}
+                    className={cn('p-1.5 rounded-lg transition-colors',
+                        plano.ativo ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-100')}>
+                    {isProcessing ? <Loader2 size={14} className="animate-spin" /> : plano.ativo ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                </button>
+                <button onClick={() => onEdit(plano)} title="Editar"
+                    className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors">
+                    <Pencil size={14} />
+                </button>
+                <button onClick={() => onDelete(plano.id)} title="Remover"
+                    className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors">
+                    <Trash2 size={14} />
+                </button>
+            </div>
+        </div>
+    );
 };
 
 const CarPricingModal = ({ car, isOpen, onClose, onUpdate, initialRentalType = 'particular' }) => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
-    const [allPricing, setAllPricing] = useState(DEFAULTS);
-    const [activeRentalType, setActiveRentalType] = useState(initialRentalType);
-    const [saving, setSaving] = useState(false);
+    const [planos, setPlanos] = useState({ particular: [], motorista: [], corporativo: [] });
+    const [activeTipo, setActiveTipo] = useState(initialRentalType);
+    const [activeCategoria, setActiveCategoria] = useState('diario');
+    const [addingPlan, setAddingPlan] = useState(false);
+    const [editingPlano, setEditingPlano] = useState(null);
+    const [processingId, setProcessingId] = useState(null);
 
     useEffect(() => {
         if (isOpen && car) {
-            setActiveRentalType(initialRentalType);
-            initPricing();
+            setActiveTipo(initialRentalType);
+            setActiveCategoria('diario');
+            setAddingPlan(false);
+            setEditingPlano(null);
+            loadPlanos();
         }
     }, [isOpen, car]);
 
-    const addPrefix = (obj, prefix) =>
-        Object.fromEntries(Object.entries(obj).map(([k, v]) =>
-            k.startsWith(prefix) || ['preco_diaria_', 'preco_km_extra_', 'km_inclusos_'].some(p => k.startsWith(p))
-                ? [k, v]
-                : [`${prefix}_${k}`, v]
-        ));
-
-    const initPricing = async () => {
+    const loadPlanos = async () => {
         setLoading(true);
         try {
-            const res = await carService.getCarsKmPricing(car.id);
-            setAllPricing({
-                particular: { ...DEFAULTS.particular, ...addPrefix(res.data.particular, 'particular') },
-                motorista: { ...DEFAULTS.motorista, ...addPrefix(res.data.motorista, 'motorista') },
-                corporativo: { ...DEFAULTS.corporativo, ...addPrefix(res.data.corporativo, 'corporativo') },
+            const res = await carPlanosService.getPlanosByCarroId(car.id);
+            const grouped = parseCarPlanosResponse(res);
+            const ordem = { diario: 0, semanal: 1, trimestral: 2, semestral: 3, anual: 4 };
+            Object.keys(grouped).forEach(tipo => {
+                grouped[tipo].sort((a, b) =>
+                    (ordem[a.categoria] ?? 99) - (ordem[b.categoria] ?? 99) || a.km_franquia - b.km_franquia
+                );
             });
-        } catch (err) {
-            toast({ title: 'Erro', description: 'Falha ao carregar preços.', variant: 'destructive' });
+            setPlanos(grouped);
+        } catch {
+            toast({ title: 'Erro', description: 'Falha ao carregar planos.', variant: 'destructive' });
         }
         setLoading(false);
     };
 
-    const handleFieldChange = (field, value) => {
-        setAllPricing(prev => ({
-            ...prev,
-            [activeRentalType]: { ...prev[activeRentalType], [field]: value }
-        }));
-    };
-
-    const handleSave = async () => {
-        setSaving(true);
+    const handleAdd = async (formData) => {
+        setProcessingId('new');
         try {
-            await carService.patchCarsPricingById(car.id, buildApiPayload(allPricing));
-            toast({ title: 'Salvo!', className: 'bg-green-600 text-white' });
+            await carPlanosService.createPlano({ carro_id: car.id, tipo: activeTipo, ...formData });
+            toast({ title: 'Plano criado!', className: 'bg-green-600 text-white' });
+            setAddingPlan(false);
+            setActiveCategoria(formData.categoria);
+            loadPlanos();
             if (onUpdate) onUpdate();
         } catch (err) {
-            toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+            toast({ title: 'Erro ao criar', description: err.message, variant: 'destructive' });
         }
-        setSaving(false);
+        setProcessingId(null);
+    };
+
+    const handleEditSave = async (formData) => {
+        setProcessingId(editingPlano.id);
+        try {
+            await carPlanosService.updatePlano(editingPlano.id, formData);
+            toast({ title: 'Plano atualizado!', className: 'bg-green-600 text-white' });
+            setEditingPlano(null);
+            loadPlanos();
+            if (onUpdate) onUpdate();
+        } catch (err) {
+            toast({ title: 'Erro ao atualizar', description: err.message, variant: 'destructive' });
+        }
+        setProcessingId(null);
+    };
+
+    const handleToggle = async (plano) => {
+        setProcessingId(plano.id);
+        try {
+            await carPlanosService.togglePlano(plano.id, plano.ativo);
+            loadPlanos();
+        } catch (err) {
+            toast({ title: 'Erro ao alternar status', description: err.message, variant: 'destructive' });
+        }
+        setProcessingId(null);
+    };
+
+    const handleDelete = async (id) => {
+        setProcessingId(id);
+        try {
+            await carPlanosService.deletePlano(id);
+            toast({ title: 'Plano removido', className: 'bg-green-600 text-white' });
+            loadPlanos();
+            if (onUpdate) onUpdate();
+        } catch (err) {
+            toast({ title: 'Erro ao remover', description: err.message, variant: 'destructive' });
+        }
+        setProcessingId(null);
     };
 
     if (!car) return null;
 
-    const f = allPricing[activeRentalType] || {};
+    const planosDoTipo = planos[activeTipo] ?? [];
+    const planosVisiveis = planosDoTipo.filter(p => p.categoria === activeCategoria);
 
-    const RentalTypeButton = ({ type, icon: Icon, label, colorClass }) => (
-        <button
-            onClick={() => setActiveRentalType(type)}
-            className={cn(
-                'flex items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all font-bold text-sm w-full justify-center',
-                activeRentalType === type
-                    ? `${colorClass} border-current ring-1 ring-offset-2 ring-current`
-                    : 'border-gray-100 text-gray-400 hover:border-gray-200 hover:bg-gray-50'
-            )}
-        >
-            <Icon size={18} />
-            {label}
-        </button>
-    );
+    // conta planos por categoria com uma única passagem
+    const countByCategoria = planosDoTipo.reduce((acc, p) => {
+        acc[p.categoria] = (acc[p.categoria] || 0) + 1;
+        return acc;
+    }, {});
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose} maxWidth="max-w-6xl">
-            <DialogContent className="w-full max-w-6xl max-h-[90vh] overflow-y-auto sm:max-w-5xl">
+        <Dialog open={isOpen} onOpenChange={onClose} maxWidth="max-w-5xl">
+            <DialogContent className="w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <div className="flex items-center gap-4 mb-4">
-                        <div className="w-16 h-16 rounded-lg bg-gray-100 border overflow-hidden">
-                            {car.imagem_url ? <img src={car.imagem_url} className="w-full h-full object-cover" alt={car.nome} /> : <Car className="m-auto mt-4 text-gray-400" />}
+                        <div className="w-16 h-16 rounded-lg bg-gray-100 border overflow-hidden flex-shrink-0">
+                            {car.imagem_url
+                                ? <img src={car.imagem_url} className="w-full h-full object-cover" alt={car.nome} />
+                                : <Car className="m-auto mt-4 text-gray-400" />}
                         </div>
                         <div>
                             <DialogTitle className="text-xl font-bold text-[#0E3A2F]">{car.marca} {car.nome}</DialogTitle>
@@ -129,137 +244,135 @@ const CarPricingModal = ({ car, isOpen, onClose, onUpdate, initialRentalType = '
                     </div>
                 </DialogHeader>
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                    <RentalTypeButton type="particular" icon={User} label="Particular" colorClass="bg-blue-50 text-blue-700 border-blue-600" />
-                    <RentalTypeButton type="motorista" icon={Users} label="Motorista App" colorClass="bg-green-50 text-green-700 border-green-600" />
-                    <RentalTypeButton type="corporativo" icon={Building2} label="Corporativo" colorClass="bg-purple-50 text-purple-700 border-purple-600" />
+                {/* Tabs de tipo (Particular / Motorista / Corporativo) */}
+                <div className="grid grid-cols-3 gap-2 mb-5">
+                    {TIPO_TABS.map(({ type, icon: Icon, label, colorClass }) => (
+                        <button
+                            key={type}
+                            onClick={() => {
+                                setActiveTipo(type);
+                                setAddingPlan(false);
+                                setEditingPlano(null);
+                                const permitidas = CATEGORIAS_POR_TIPO[type];
+                                if (!permitidas.includes(activeCategoria)) setActiveCategoria(permitidas[0]);
+                            }}
+                            className={cn(
+                                'flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 transition-all font-bold text-sm justify-center',
+                                activeTipo === type
+                                    ? `${colorClass} border-current ring-1 ring-offset-2 ring-current`
+                                    : 'border-gray-100 text-gray-400 hover:border-gray-200 hover:bg-gray-50'
+                            )}
+                        >
+                            <Icon size={16} />
+                            {label}
+                            {planos[type]?.length > 0 && (
+                                <span className={cn('ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full',
+                                    activeTipo === type ? 'bg-white/60' : 'bg-gray-100 text-gray-500')}>
+                                    {planos[type].length}
+                                </span>
+                            )}
+                        </button>
+                    ))}
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#00D166]" size={40} /></div>
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="animate-spin text-[#00D166]" size={40} />
+                    </div>
                 ) : (
-                    <Tabs defaultValue={activeRentalType === 'particular' ? 'semanal' : 'trimestral'} key={activeRentalType}>
-                        <TabsList className="flex flex-wrap h-auto bg-gray-100 p-1 gap-1 mb-2">
-                            {activeRentalType === 'particular' && <TabsTrigger value="semanal" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Semanal</TabsTrigger>}
-                            <TabsTrigger value="trimestral" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Trimestral / Semestral</TabsTrigger>
-                            <TabsTrigger value="anual" className="data-[state=active]:bg-[#0E3A2F] data-[state=active]:text-white data-[state=active]:shadow-md">Anual</TabsTrigger>
-                        </TabsList>
+                    <>
+                        {/* Sub-tabs de categoria (Diário / Semanal / ...) */}
+                        <div className="flex gap-1 border-b border-gray-100 mb-4 overflow-x-auto pb-px">
+                            {CATEGORIAS.filter(c => CATEGORIAS_POR_TIPO[activeTipo].includes(c.value)).map(({ value, label }) => (
+                                <button
+                                    key={value}
+                                    onClick={() => { setActiveCategoria(value); setAddingPlan(false); setEditingPlano(null); }}
+                                    className={cn(
+                                        'flex items-center gap-1.5 px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors -mb-px',
+                                        activeCategoria === value
+                                            ? 'border-[#0E3A2F] text-[#0E3A2F]'
+                                            : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300'
+                                    )}
+                                >
+                                    {label}
+                                    {countByCategoria[value] > 0 && (
+                                        <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                                            activeCategoria === value ? 'bg-[#0E3A2F]/10 text-[#0E3A2F]' : 'bg-gray-100 text-gray-400')}>
+                                            {countByCategoria[value]}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
 
-                        {/* SEMANAL (apenas particular) */}
-                        {activeRentalType === 'particular' && (
-                            <TabsContent value="semanal" className="space-y-2 pt-2">
-                                <PriceField label="Taxa por KM Extra (km excedidos)" field="particular_km_extra" value={f.particular_km_extra} onChange={handleFieldChange} />
-                                <PriceField label="Semanal 1500km" field="particular_semanal_1500" value={f.particular_semanal_1500} onChange={handleFieldChange} />
-                                <PriceField label="Semanal 2000km" field="particular_semanal_2000" value={f.particular_semanal_2000} onChange={handleFieldChange} />
-                                <PriceField label="Semanal 3000km" field="particular_semanal_3000" value={f.particular_semanal_3000} onChange={handleFieldChange} />
-                            </TabsContent>
-                        )}
+                        {/* Lista de planos filtrados */}
+                        <div className="space-y-2 min-h-[80px]">
+                            {planosVisiveis.length === 0 && !addingPlan && (
+                                <div className="text-center py-8 text-gray-400 border rounded-xl border-dashed">
+                                    <p className="text-sm">Nenhum plano <strong>{CATEGORIAS.find(c => c.value === activeCategoria)?.label}</strong> para {TIPO_TABS.find(t => t.type === activeTipo)?.label}.</p>
+                                    <p className="text-xs mt-1">Clique em "+ Adicionar Plano" para criar.</p>
+                                </div>
+                            )}
 
-                        {/* TRIMESTRAL / SEMESTRAL */}
-                        <TabsContent value="trimestral" className="space-y-2 pt-2">
-                            {activeRentalType === 'particular' && (
-                                <>
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Trimestral</p>
-                                    <PriceField label="Trimestral 1000km" field="particular_trimestral_1000" value={f.particular_trimestral_1000} onChange={handleFieldChange} />
-                                    <PriceField label="Trimestral 1500km" field="particular_trimestral_1500" value={f.particular_trimestral_1500} onChange={handleFieldChange} />
-                                    <PriceField label="Trimestral 2000km" field="particular_trimestral_2000" value={f.particular_trimestral_2000} onChange={handleFieldChange} />
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Semestral</p>
-                                    <PriceField label="Semestral 1000km" field="particular_semestral_1000" value={f.particular_semestral_1000} onChange={handleFieldChange} />
-                                    <PriceField label="Semestral 1500km" field="particular_semestral_1500" value={f.particular_semestral_1500} onChange={handleFieldChange} />
-                                    <PriceField label="Semestral 2000km" field="particular_semestral_2000" value={f.particular_semestral_2000} onChange={handleFieldChange} />
-                                </>
-                            )}
-                            {activeRentalType === 'motorista' && (
-                                <>
-                                    <PriceField label="Taxa por KM Extra (km excedidos)" field="motorista_km_extra" value={f.motorista_km_extra} onChange={handleFieldChange} />
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Trimestral</p>
-                                    <PriceField label="Trimestral 2500km" field="motorista_trimestral_2500" value={f.motorista_trimestral_2500} onChange={handleFieldChange} />
-                                    <PriceField label="Trimestral 5000km" field="motorista_trimestral_5000" value={f.motorista_trimestral_5000} onChange={handleFieldChange} />
-                                    <PriceField label="Trimestral 6000km" field="motorista_trimestral_6000" value={f.motorista_trimestral_6000} onChange={handleFieldChange} />
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Semestral</p>
-                                    <PriceField label="Semestral 2500km" field="motorista_semestral_2500" value={f.motorista_semestral_2500} onChange={handleFieldChange} />
-                                    <PriceField label="Semestral 5000km" field="motorista_semestral_5000" value={f.motorista_semestral_5000} onChange={handleFieldChange} />
-                                    <PriceField label="Semestral 6000km" field="motorista_semestral_6000" value={f.motorista_semestral_6000} onChange={handleFieldChange} />
-                                </>
-                            )}
-                            {activeRentalType === 'corporativo' && (
-                                <>
-                                    <PriceField label="Taxa por KM Extra (km excedidos)" field="corporativo_km_extra" value={f.corporativo_km_extra} onChange={handleFieldChange} />
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Trimestral</p>
-                                    <PriceField label="Trimestral 1000km" field="corporativo_trimestral_1000" value={f.corporativo_trimestral_1000} onChange={handleFieldChange} />
-                                    <PriceField label="Trimestral 2500km" field="corporativo_trimestral_2500" value={f.corporativo_trimestral_2500} onChange={handleFieldChange} />
-                                    <PriceField label="Trimestral 5000km" field="corporativo_trimestral_5000" value={f.corporativo_trimestral_5000} onChange={handleFieldChange} />
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Semestral</p>
-                                    <PriceField label="Semestral 1000km" field="corporativo_semestral_1000" value={f.corporativo_semestral_1000} onChange={handleFieldChange} />
-                                    <PriceField label="Semestral 2500km" field="corporativo_semestral_2500" value={f.corporativo_semestral_2500} onChange={handleFieldChange} />
-                                    <PriceField label="Semestral 5000km" field="corporativo_semestral_5000" value={f.corporativo_semestral_5000} onChange={handleFieldChange} />
-                                </>
-                            )}
-                        </TabsContent>
+                            {planosVisiveis.map(plano => (
+                                editingPlano?.id === plano.id ? (
+                                    <PlanoForm
+                                        key={plano.id}
+                                        activeCategoria={activeCategoria}
+                                        initial={{
+                                            categoria: plano.categoria,
+                                            km_franquia: plano.km_franquia,
+                                            km_custom: KM_OPCOES.some(o => o.value === plano.km_franquia) ? '' : String(plano.km_franquia),
+                                            _useCustom: !KM_OPCOES.some(o => o.value === plano.km_franquia),
+                                            preco: String(plano.preco),
+                                            ativo: plano.ativo,
+                                        }}
+                                        onSave={handleEditSave}
+                                        onCancel={() => setEditingPlano(null)}
+                                        saving={processingId === plano.id}
+                                    />
+                                ) : (
+                                    <PlanoRow
+                                        key={plano.id}
+                                        plano={plano}
+                                        onToggle={handleToggle}
+                                        onEdit={(p) => { setEditingPlano(p); setAddingPlan(false); }}
+                                        onDelete={handleDelete}
+                                        isProcessing={processingId === plano.id}
+                                    />
+                                )
+                            ))}
 
-                        {/* ANUAL */}
-                        <TabsContent value="anual" className="space-y-2 pt-2">
-                            {activeRentalType === 'particular' && (
-                                <>
-                                    <PriceField label="Anual 1000km" field="particular_anual_1000" value={f.particular_anual_1000} onChange={handleFieldChange} />
-                                    <PriceField label="Anual 1500km" field="particular_anual_1500" value={f.particular_anual_1500} onChange={handleFieldChange} />
-                                    <PriceField label="Anual 2000km" field="particular_anual_2000" value={f.particular_anual_2000} onChange={handleFieldChange} />
-                                </>
+                            {addingPlan && (
+                                <PlanoForm
+                                    activeCategoria={activeCategoria}
+                                    onSave={handleAdd}
+                                    onCancel={() => setAddingPlan(false)}
+                                    saving={processingId === 'new'}
+                                />
                             )}
-                            {activeRentalType === 'motorista' && (
-                                <>
-                                    <PriceField label="Anual 2500km" field="motorista_anual_2500" value={f.motorista_anual_2500} onChange={handleFieldChange} />
-                                    <PriceField label="Anual 5000km" field="motorista_anual_5000" value={f.motorista_anual_5000} onChange={handleFieldChange} />
-                                    <PriceField label="Anual 6000km" field="motorista_anual_6000" value={f.motorista_anual_6000} onChange={handleFieldChange} />
-                                </>
-                            )}
-                            {activeRentalType === 'corporativo' && (
-                                <>
-                                    <PriceField label="Anual 1000km" field="corporativo_anual_1000" value={f.corporativo_anual_1000} onChange={handleFieldChange} />
-                                    <PriceField label="Anual 2500km" field="corporativo_anual_2500" value={f.corporativo_anual_2500} onChange={handleFieldChange} />
-                                    <PriceField label="Anual 5000km" field="corporativo_anual_5000" value={f.corporativo_anual_5000} onChange={handleFieldChange} />
-                                </>
-                            )}
-                        </TabsContent>
-                    </Tabs>
+                        </div>
+                    </>
                 )}
 
-                <div className="flex justify-end mt-4 border-t pt-4 gap-3">
+                {/* Footer */}
+                <div className="flex justify-between items-center mt-5 pt-4 border-t">
                     <button
-                        onClick={onClose}
-                        disabled={saving}
-                        className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-100 transition-colors disabled:opacity-60"
+                        onClick={() => { setAddingPlan(true); setEditingPlano(null); }}
+                        disabled={loading || addingPlan}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#00D166] text-[#0E3A2F] font-bold rounded-lg text-sm hover:bg-[#00F178] disabled:opacity-50 transition-colors"
                     >
-                        Cancelar
+                        <Plus size={16} />
+                        Adicionar Plano
                     </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="px-6 py-2 bg-[#0E3A2F] text-white rounded-lg font-bold hover:bg-[#0a2a22] transition-colors disabled:opacity-60 flex items-center gap-2"
-                    >
-                        {saving ? <Loader2 size={16} className="animate-spin" /> : null}
-                        Salvar
+                    <button onClick={onClose}
+                        className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-bold hover:bg-gray-100 text-sm">
+                        Fechar
                     </button>
                 </div>
             </DialogContent>
         </Dialog>
     );
 };
-
-const PriceField = ({ label, field, value, onChange, isNumber = false }) => (
-    <div className="flex items-center justify-between p-3 border rounded-lg bg-white shadow-sm">
-        <Label className="text-sm font-medium text-gray-700">{label}</Label>
-        <div className="flex items-center gap-2">
-            {!isNumber && <span className="text-gray-500 text-sm">R$</span>}
-            <Input
-                type="number"
-                className="w-32 h-9"
-                placeholder="0"
-                value={value ?? ''}
-                onChange={(e) => onChange(field, e.target.value)}
-            />
-        </div>
-    </div>
-);
 
 export default CarPricingModal;

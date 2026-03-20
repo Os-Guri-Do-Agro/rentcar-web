@@ -1,382 +1,354 @@
-import React, { useState, useEffect } from 'react';
-import { Loader2, ArrowRight, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Loader2, AlertTriangle, Gauge, Users, Car, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DateRangeSelector from './DateRangeSelector';
-import FranquiaSelector from './FranquiaSelector';
 import ResumoPrecoSimulacao from './ResumoPrecoSimulacao';
 import { calcularDataDevolucao, calcularDuracao } from '@/services/reservaService';
-import { calcularPrecoReserva } from '@/services/calculoPrecoService';
+import { CATEGORIAS, KM_OPCOES } from '@/constants/carPlanos';
+import carPlanosService from '@/services/cars/carPlanosService';
 import { useReserva } from '@/context/ReservaContext';
 import { useToast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
+
+const TIPO_CONFIG = {
+    particular:  { label: 'Particular',    icon: Users,     activeClass: 'border-blue-500 bg-blue-50 text-blue-800' },
+    motorista:   { label: 'Motorista App', icon: Car,       activeClass: 'border-green-500 bg-green-50 text-green-800' },
+    corporativo: { label: 'Corporativo',   icon: Building2, activeClass: 'border-purple-500 bg-purple-50 text-purple-800' },
+};
+
+// Mapa de km_franquia → label legível (fallback para valores não listados no constants)
+const KM_LABEL_MAP = Object.fromEntries(KM_OPCOES.map(o => [o.value, o.label]));
+const kmLabel = (km) => KM_LABEL_MAP[km] ?? (km === 0 ? 'KM Livre' : `${km.toLocaleString('pt-BR')} KM`);
 
 const ReservaForm = ({ car }) => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const { setDadosReserva, setTipoReserva, dadosReserva } = useReserva();
-    
-    // --- State Management ---
-    // If we have pre-filled data in context (from Frota page), use it.
+
+    // planos do tipo selecionado, flat list vindos de /car-planos/filter
+    const [planos, setPlanos] = useState([]);
+    const [loadingPlanos, setLoadingPlanos] = useState(true);
+    // quais tipos têm planos disponíveis (carregado uma vez na montagem)
+    const [tiposDisponiveis, setTiposDisponiveis] = useState([]);
+    const [loadingTipos, setLoadingTipos] = useState(true);
+
     const [tipoLocacao, setTipoLocacao] = useState(dadosReserva?.tipo_locacao || 'particular');
-    const [tipoPlano, setTipoPlano] = useState(dadosReserva?.plano || 'diario');
-    const [usoKm, setUsoKm] = useState(dadosReserva?.franquia_km || 60); 
+    const [categoria, setCategoria] = useState(dadosReserva?.plano || '');
+    const [kmFranquia, setKmFranquia] = useState(
+        dadosReserva?.km_franquia != null ? Number(dadosReserva.km_franquia) : null
+    );
 
     const [dataRetirada, setDataRetirada] = useState('');
     const [dataDevolucao, setDataDevolucao] = useState('');
-
-    // Price & Summary State
-    const [preco, setPreco] = useState(0);      
-    const [precoTotal, setPrecoTotal] = useState(0);
-    const [precoSemanal, setPrecoSemanal] = useState(0);
-    const [precoMensal, setPrecoMensal] = useState(0);
     const [duracaoDias, setDuracaoDias] = useState(0);
-    const [calculating, setCalculating] = useState(false);
-    const [errorMsg, setErrorMsg] = useState('');
 
-    // --- Validation and Defaults ---
+    // Descobre quais tipos têm planos para este carro (3 requests paralelos na montagem)
     useEffect(() => {
-        if (!car) {
-            toast({ title: "Erro", description: "Veículo não encontrado.", variant: "destructive" });
-            navigate('/frota');
-            return;
+        if (!car?.id) return;
+        setLoadingTipos(true);
+        Promise.all(
+            Object.keys(TIPO_CONFIG).map(tipo =>
+                carPlanosService.getPlanosFiltro(tipo, undefined, car.id)
+                    .then(res => ({ tipo, hasPlanos: (res?.data ?? []).some(p => p.ativo) }))
+                    .catch(() => ({ tipo, hasPlanos: false }))
+            )
+        ).then(results => {
+            const disponiveis = results.filter(r => r.hasPlanos).map(r => r.tipo);
+            setTiposDisponiveis(disponiveis);
+            // Ajusta tipoLocacao inicial se necessário
+            setTipoLocacao(prev =>
+                disponiveis.includes(prev) ? prev : (disponiveis[0] ?? 'particular')
+            );
+        }).finally(() => setLoadingTipos(false));
+    }, [car?.id]);
+
+    // Busca os planos do tipo selecionado via /car-planos/filter?tipo=X&carro_id=Y
+    useEffect(() => {
+        if (!car?.id || loadingTipos) return;
+        setLoadingPlanos(true);
+        setCategoria('');
+        setKmFranquia(null);
+        carPlanosService.getPlanosFiltro(tipoLocacao, undefined, car.id)
+            .then(res => setPlanos((res?.data ?? []).filter(p => p.ativo)))
+            .catch(() => {
+                setPlanos([]);
+                toast({ title: 'Erro', description: 'Não foi possível carregar os planos.', variant: 'destructive' });
+            })
+            .finally(() => setLoadingPlanos(false));
+    }, [tipoLocacao, car?.id, loadingTipos]);
+
+    // Categorias disponíveis para os planos carregados (na ordem de CATEGORIAS)
+    const categoriasDisponiveis = useMemo(() => {
+        const cats = new Set(planos.map(p => p.categoria));
+        return CATEGORIAS.filter(c => cats.has(c.value));
+    }, [planos]);
+
+    // Ajusta categoria quando os planos carregam
+    useEffect(() => {
+        if (!categoriasDisponiveis.length) return;
+        setCategoria(prev =>
+            categoriasDisponiveis.find(c => c.value === prev)
+                ? prev
+                : (dadosReserva?.plano && categoriasDisponiveis.find(c => c.value === dadosReserva.plano)
+                    ? dadosReserva.plano
+                    : categoriasDisponiveis[0].value)
+        );
+    }, [categoriasDisponiveis]);
+
+    // Opções de KM para o tipo + categoria selecionados, com preço
+    const kmOpcoes = useMemo(() => {
+        if (!categoria) return [];
+        return planos
+            .filter(p => p.categoria === categoria)
+            .sort((a, b) => a.km_franquia - b.km_franquia)
+            .map(p => ({ km: p.km_franquia, label: kmLabel(p.km_franquia), preco: Number(p.preco) }));
+    }, [planos, categoria]);
+
+    // Ajusta kmFranquia quando as opções mudam
+    useEffect(() => {
+        if (!kmOpcoes.length) return;
+        setKmFranquia(prev =>
+            kmOpcoes.find(o => o.km === prev) ? prev : kmOpcoes[0].km
+        );
+    }, [kmOpcoes]);
+
+    // Plano correspondente à seleção atual
+    const selectedPlano = useMemo(
+        () => planos.find(p => p.categoria === categoria && p.km_franquia === kmFranquia) ?? null,
+        [planos, categoria, kmFranquia]
+    );
+
+    // Cálculo de preços
+    const { preco, precoTotal, precoSemanal, precoMensal } = useMemo(() => {
+        const base = selectedPlano ? Number(selectedPlano.preco) : 0;
+        if (!base) return { preco: 0, precoTotal: 0, precoSemanal: 0, precoMensal: 0 };
+
+        if (categoria === 'diario') {
+            return { preco: base, precoTotal: base * (duracaoDias || 1), precoSemanal: 0, precoMensal: 0 };
         }
 
-        // If context has data, respect it. Otherwise check availability.
-        if (dadosReserva?.tipo_locacao) {
-            setTipoLocacao(dadosReserva.tipo_locacao);
-            if (dadosReserva.plano) setTipoPlano(dadosReserva.plano);
-            if (dadosReserva.franquia_km) setUsoKm(parseInt(dadosReserva.franquia_km));
-        } else {
-            // Default fallbacks if no context
-            if (car.disponivel_motorista && !car.disponivel_particular) {
-                setTipoLocacao('motorista');
-                setTipoPlano('trimestral'); 
-                setUsoKm(2500); 
-            } else if (car.disponivel_particular) {
-                setTipoLocacao('particular');
-                setTipoPlano('diario'); 
-                setUsoKm(60); 
-            }
-        }
-    }, [car, navigate, toast, dadosReserva]);
+        const semanal = categoria === 'semanal'    ? base
+                      : categoria === 'trimestral' ? base / 13
+                      : categoria === 'semestral'  ? base / 26
+                      : categoria === 'anual'      ? base / 52 : 0;
+        const mensal  = categoria === 'trimestral' ? base / 3
+                      : categoria === 'semestral'  ? base / 6
+                      : categoria === 'anual'      ? base / 12 : 0;
 
-    // --- Price Calculation Logic ---
-    const calcularPreco = async (vals) => {
-        const { tLocacao, tPlano, tUsoKm, dRetirada, dDevolucao } = vals;
+        return { preco: base, precoTotal: base, precoSemanal: semanal, precoMensal: mensal };
+    }, [selectedPlano, categoria, duracaoDias]);
 
-        if (!tLocacao || !tPlano || !dRetirada || !dDevolucao) return;
-        
-        setCalculating(true);
-        setErrorMsg('');
+    // ---- Handlers ----
 
-        try {
-            const dias = calcularDuracao(dRetirada, dDevolucao, tPlano);
-            const res = await calcularPrecoReserva(car.id, tLocacao, tPlano, tUsoKm, dRetirada, dDevolucao);
-            
-            if (res.erro) {
-                setErrorMsg(res.erro);
-                setPreco(0);
-                setPrecoTotal(0);
-                setPrecoSemanal(0);
-                setPrecoMensal(0);
-                setDuracaoDias(dias);
-            } else {
-                setPreco(res.diario || res.valorBase || 0);
-                setPrecoTotal(res.total);
-                setPrecoSemanal(res.semanal || 0);
-                setPrecoMensal(res.mensal || 0);
-                setDuracaoDias(res.dias || dias);
-            }
-
-        } catch (error) {
-            console.error(error);
-            setErrorMsg("Erro ao calcular valores.");
-        } finally {
-            setCalculating(false);
-        }
+    const handleTipoChange = (newTipo) => {
+        setTipoLocacao(newTipo);
+        setDataRetirada('');
+        setDataDevolucao('');
+        setDuracaoDias(0);
     };
 
-    // --- Event Handlers ---
-
-    const handleTipoLocacaoChange = (newType) => {
-        setTipoLocacao(newType);
-        // Reset plan to default for type
-        setPreco(0);
-        setPrecoTotal(0);
-        setErrorMsg('');
-        
-        if (newType === 'motorista') {
-             setTipoPlano('trimestral');
-             setUsoKm(2500);
-        } else if (newType === 'particular') {
-            setTipoPlano('diario');
-            setUsoKm(60);
-        }
-    };
-
-    const handleTipoPlanoChange = (newPlan) => {
-        setTipoPlano(newPlan);
-        setPreco(0);
-        setPrecoTotal(0);
-        setErrorMsg('');
-        
-        let newDevolucao = '';
-        let newUsoKm = '';
-
-        if (newPlan !== 'diario' && dataRetirada) {
-            newDevolucao = calcularDataDevolucao(dataRetirada, newPlan);
-            setDataDevolucao(newDevolucao);
-        } else if (newPlan === 'diario') {
-             newUsoKm = 60; 
-             // Keep existing end date if manually set, otherwise maybe clear? 
-             // Usually manual set for daily
-        } else if (newPlan === 'franquia') {
-            newUsoKm = tipoLocacao === 'particular' ? 1500 : 2500;
-        }
-
-        // Set default KM for new plans if not set or switching plan types
-        if (!newUsoKm) {
-             if (tipoLocacao === 'particular' && newPlan === 'semanal') newUsoKm = 1500;
-             else if (tipoLocacao === 'motorista' && ['trimestral', 'semestral', 'anual'].includes(newPlan)) newUsoKm = 2500;
-        }
-
-        if (newUsoKm !== '') setUsoKm(parseInt(newUsoKm));
-
-        // If dates are valid, recalc immediately
-        if (dataRetirada && (newDevolucao || dataDevolucao)) {
-             calcularPreco({
-                 tLocacao: tipoLocacao,
-                 tPlano: newPlan,
-                 tUsoKm: newUsoKm || usoKm,
-                 dRetirada: dataRetirada,
-                 dDevolucao: newDevolucao || dataDevolucao
-             });
-        }
+    const handleCategoriaChange = (newCat) => {
+        setCategoria(newCat);
+        setDataRetirada('');
+        setDataDevolucao('');
+        setDuracaoDias(0);
     };
 
     const handleDataRetiradaChange = (e) => {
-        const newVal = e.target.value;
-        setDataRetirada(newVal);
+        const val = e.target.value;
+        setDataRetirada(val);
+        if (!val) return;
 
-        let newDevolucao = dataDevolucao;
-
-        // Auto-calc end date if not daily
-        if (tipoPlano !== 'diario') {
-            newDevolucao = calcularDataDevolucao(newVal, tipoPlano);
-            setDataDevolucao(newDevolucao);
+        if (categoria !== 'diario') {
+            const devolucao = calcularDataDevolucao(val, categoria);
+            setDataDevolucao(devolucao);
+            setDuracaoDias(calcularDuracao(val, devolucao, categoria));
         } else {
-            // For daily, if start is after end, reset end
-            if (dataDevolucao && new Date(newVal) > new Date(dataDevolucao)) {
-                newDevolucao = '';
+            if (dataDevolucao && new Date(val) >= new Date(dataDevolucao)) {
                 setDataDevolucao('');
-                setPreco(0);
-                setPrecoTotal(0);
+                setDuracaoDias(0);
+            } else if (dataDevolucao) {
+                setDuracaoDias(calcularDuracao(val, dataDevolucao, categoria));
             }
-        }
-
-        if (newDevolucao) {
-            calcularPreco({
-                tLocacao: tipoLocacao,
-                tPlano: tipoPlano,
-                tUsoKm: usoKm,
-                dRetirada: newVal,
-                dDevolucao: newDevolucao
-            });
         }
     };
 
     const handleDataDevolucaoChange = (e) => {
-        const newVal = e.target.value;
-        setDataDevolucao(newVal);
-
-        calcularPreco({
-            tLocacao: tipoLocacao,
-            tPlano: tipoPlano,
-            tUsoKm: usoKm,
-            dRetirada: dataRetirada,
-            dDevolucao: newVal
-        });
-    };
-
-    const handleUsoKmChange = (val) => {
-        setUsoKm(val);
-        if (dataRetirada && dataDevolucao) {
-            calcularPreco({
-                tLocacao: tipoLocacao,
-                tPlano: tipoPlano,
-                tUsoKm: val,
-                dRetirada: dataRetirada,
-                dDevolucao: dataDevolucao
-            });
-        }
+        const val = e.target.value;
+        setDataDevolucao(val);
+        if (dataRetirada && val) setDuracaoDias(calcularDuracao(dataRetirada, val, categoria));
     };
 
     const handleContinuar = () => {
         const errors = [];
-        if (!dataRetirada) errors.push("Data de retirada é obrigatória");
-        if (!dataDevolucao) errors.push("Data de devolução é obrigatória");
-        
-        if (precoTotal === null || precoTotal === undefined || precoTotal <= 0) {
-            errors.push("Erro no cálculo do preço. Verifique disponibilidade.");
-        }
-        
-        if (!tipoPlano) errors.push("Plano não selecionado");
+        if (!dataRetirada) errors.push('Data de retirada é obrigatória');
+        if (!dataDevolucao) errors.push('Data de devolução é obrigatória');
+        if (!selectedPlano) errors.push('Selecione um plano disponível');
+        if (precoTotal <= 0) errors.push('Erro no cálculo do preço');
 
-        if (errors.length > 0) {
-            toast({ 
-                title: "Atenção", 
-                description: errors.join('. '), 
-                variant: "destructive" 
-            });
+        if (errors.length) {
+            toast({ title: 'Atenção', description: errors.join('. '), variant: 'destructive' });
             return;
         }
 
         const reservaData = {
             carroId: car.id,
             tipo_locacao: tipoLocacao,
-            plano: tipoPlano,
-            franquia_km: usoKm,
-            dataRetirada: dataRetirada,
-            dataDevolucao: dataDevolucao,
+            plano: categoria,
+            franquia_km: kmFranquia,
+            dataRetirada,
+            dataDevolucao,
             valorTotal: precoTotal,
             valorDiario: preco,
-            km_contratado: parseInt(usoKm),
+            km_contratado: kmFranquia,
             duracaoDias,
             dataInicio: dataRetirada,
             dataFim: dataDevolucao,
-            carro: car 
+            carro: car,
+            plano_id: selectedPlano?.id,
         };
 
         setTipoReserva(tipoLocacao);
         setDadosReserva(reservaData);
-        
-        navigate(`/documentos/${car.id}`, { 
-            state: { 
-                reserva: reservaData,
-                carro: car 
-            } 
-        });
+        navigate(`/documentos/${car.id}`, { state: { reserva: reservaData, carro: car } });
     };
 
     if (!car) return null;
 
-    const showKmSelector = () => {
-        if (tipoLocacao === 'particular' && tipoPlano === 'semanal') return true;
-        if (tipoLocacao === 'motorista' && ['trimestral', 'semestral', 'anual'].includes(tipoPlano)) return true;
-        if (tipoPlano === 'diario' || tipoPlano === 'franquia') return true;
-        if (tipoPlano === 'semanal' && tipoLocacao === 'motorista') return true; 
-        return false;
-    };
+    const isLoading = loadingTipos || loadingPlanos;
+    const showResumo = selectedPlano && preco > 0 && dataRetirada && dataDevolucao;
 
     return (
-        <div className="space-y-8">
-            {/* Step 1: Rental Type & Plan */}
-            <div>
-                <h3 className="text-lg font-bold text-[#0E3A2F] mb-4">1. Escolha o Plano</h3>
-                
-                <div className="flex gap-4 mb-6">
-                    {car.disponivel_particular && (
-                        <button 
-                            onClick={() => handleTipoLocacaoChange('particular')}
-                            className={`flex-1 p-3 rounded-lg border-2 font-bold transition-all ${tipoLocacao === 'particular' ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-gray-200 text-gray-500'}`}
-                        >
-                            Particular
-                        </button>
+        <div className="space-y-6">
+            {isLoading ? (
+                <div className="flex justify-center py-8">
+                    <Loader2 className="animate-spin text-[#0E3A2F]" size={32} />
+                </div>
+            ) : tiposDisponiveis.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center text-gray-500">
+                    <AlertTriangle className="text-amber-400" size={32} />
+                    <p className="font-medium">Nenhum plano disponível para este veículo.</p>
+                </div>
+            ) : (
+                <>
+                    {/* 1. Segmento */}
+                    <div>
+                        <h3 className="text-sm font-bold text-gray-500 uppercase mb-3">1. Segmento</h3>
+                        <div className="flex gap-2">
+                            {Object.entries(TIPO_CONFIG).map(([tipo, cfg]) => {
+                                const Icon = cfg.icon;
+                                const disponivel = tiposDisponiveis.includes(tipo);
+                                return (
+                                    <button
+                                        key={tipo}
+                                        onClick={() => disponivel && handleTipoChange(tipo)}
+                                        disabled={!disponivel}
+                                        title={!disponivel ? 'Sem planos disponíveis para este segmento' : undefined}
+                                        className={cn(
+                                            'flex-1 p-3 rounded-lg border-2 font-bold text-sm transition-all flex items-center justify-center gap-1',
+                                            tipoLocacao === tipo && disponivel
+                                                ? cfg.activeClass
+                                                : disponivel
+                                                    ? 'border-gray-200 text-gray-500 hover:border-gray-300'
+                                                    : 'border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50'
+                                        )}
+                                    >
+                                        <Icon size={14} /> {cfg.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* 2. Plano (categoria) */}
+                    {categoriasDisponiveis.length > 0 && (
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-500 uppercase mb-3">2. Plano</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {categoriasDisponiveis.map(cat => (
+                                    <button
+                                        key={cat.value}
+                                        onClick={() => handleCategoriaChange(cat.value)}
+                                        className={cn(
+                                            'p-3 rounded-lg border font-medium text-sm transition-all',
+                                            categoria === cat.value
+                                                ? 'bg-[#0E3A2F] text-white border-[#0E3A2F] shadow-md'
+                                                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                                        )}
+                                    >
+                                        {cat.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     )}
-                    {car.disponivel_motorista && (
-                        <button 
-                            onClick={() => handleTipoLocacaoChange('motorista')}
-                            className={`flex-1 p-3 rounded-lg border-2 font-bold transition-all ${tipoLocacao === 'motorista' ? 'border-green-500 bg-green-50 text-green-800' : 'border-gray-200 text-gray-500'}`}
-                        >
-                            Motorista App
-                        </button>
+
+                    {/* 3. Franquia KM */}
+                    {kmOpcoes.length > 0 && (
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-500 uppercase mb-3 flex items-center gap-1">
+                                <Gauge size={14} /> 3. Franquia KM
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {kmOpcoes.map(opt => (
+                                    <button
+                                        key={opt.km}
+                                        onClick={() => setKmFranquia(opt.km)}
+                                        className={cn(
+                                            'flex flex-col items-center p-3 rounded-xl border-2 font-bold text-sm transition-all',
+                                            kmFranquia === opt.km
+                                                ? 'border-[#00D166] bg-green-50 text-[#0E3A2F]'
+                                                : 'border-gray-100 bg-white text-gray-600 hover:border-gray-300'
+                                        )}
+                                    >
+                                        <span>{opt.label}</span>
+                                        <span className="text-xs font-normal text-gray-400 mt-0.5">
+                                            R$ {opt.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     )}
-                </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {tipoLocacao === 'particular' ? (
-                        <>
-                            <PlanOption id="diario" label="Diário" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                            <PlanOption id="semanal" label="Semanal (7d)" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                            <PlanOption id="franquia" label="Mensal (KM)" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                            <PlanOption id="trimestral" label="Trimestral (90d)" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                            <PlanOption id="semestral" label="Semestral (180d)" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                            <PlanOption id="anual" label="Anual (365d)" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                        </>
-                    ) : (
-                        <>
-                            <PlanOption id="semanal" label="Semanal (7d)" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                            <PlanOption id="trimestral" label="Trimestral (90d)" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                            <PlanOption id="semestral" label="Semestral (180d)" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                            <PlanOption id="anual" label="Anual (365d)" current={tipoPlano} set={(id) => handleTipoPlanoChange(id)}/>
-                        </>
+                    {/* 4. Período */}
+                    {selectedPlano && (
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-500 uppercase mb-3">4. Período</h3>
+                            <DateRangeSelector
+                                startDate={dataRetirada}
+                                endDate={dataDevolucao}
+                                onStartDateChange={handleDataRetiradaChange}
+                                onEndDateChange={handleDataDevolucaoChange}
+                                days={duracaoDias}
+                                plan={categoria}
+                            />
+                        </div>
                     )}
-                </div>
-            </div>
 
-            {/* Step 2: Date Selection */}
-            {tipoPlano && (
-                <div className="animate-in fade-in slide-in-from-bottom-2">
-                    <h3 className="text-lg font-bold text-[#0E3A2F] mb-4">2. Período</h3>
-                    <DateRangeSelector 
-                        startDate={dataRetirada} 
-                        endDate={dataDevolucao} 
-                        onStartDateChange={handleDataRetiradaChange}
-                        onEndDateChange={handleDataDevolucaoChange}
-                        days={duracaoDias}
-                        plan={tipoPlano}
-                    />
-                </div>
-            )}
-
-            {/* Step 3: Franchise Selection */}
-            {showKmSelector() && tipoPlano && (
-                <div className="animate-in fade-in slide-in-from-bottom-2">
-                     <FranquiaSelector 
-                        car={car}
-                        carId={car.id}
-                        rentalType={tipoLocacao} 
-                        plan={tipoPlano} 
-                        selectedFranchise={usoKm} 
-                        onChange={handleUsoKmChange}
-                    />
-                </div>
-            )}
-
-            {errorMsg && (
-                <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm font-bold text-center border border-red-200 animate-in fade-in">
-                    {errorMsg}
-                </div>
-            )}
-
-            {precoTotal > 0 && !errorMsg && (
-                <div className="mt-8 animate-in fade-in slide-in-from-bottom-4">
-                     <ResumoPrecoSimulacao 
-                        car={car}
-                        tipoLocacao={tipoLocacao}
-                        tipoPlano={tipoPlano}
-                        usoKm={usoKm ? parseInt(usoKm) : (tipoPlano === 'diario' ? 0 : null)}
-                        dataRetirada={dataRetirada}
-                        dataDevolucao={dataDevolucao}
-                        preco={preco}
-                        precoTotal={precoTotal}
-                        precoSemanal={precoSemanal}
-                        precoMensal={precoMensal}
-                        duracaoDias={duracaoDias}
-                        onContinuar={handleContinuar}
-                    />
-                </div>
+                    {/* Resumo */}
+                    {showResumo && (
+                        <div className="animate-in fade-in slide-in-from-bottom-4">
+                            <ResumoPrecoSimulacao
+                                car={car}
+                                tipoLocacao={tipoLocacao}
+                                tipoPlano={categoria}
+                                usoKm={kmFranquia}
+                                dataRetirada={dataRetirada}
+                                dataDevolucao={dataDevolucao}
+                                preco={preco}
+                                precoTotal={precoTotal}
+                                precoSemanal={precoSemanal}
+                                precoMensal={precoMensal}
+                                duracaoDias={duracaoDias}
+                                onContinuar={handleContinuar}
+                            />
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
 };
-
-const PlanOption = ({ id, label, current, set }) => (
-    <button 
-        onClick={() => set(id)}
-        className={`p-3 rounded-lg border font-medium text-sm transition-all ${current === id ? 'bg-[#0E3A2F] text-white border-[#0E3A2F] shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:bg-gray-50'}`}
-    >
-        {label}
-    </button>
-);
 
 export default ReservaForm;
