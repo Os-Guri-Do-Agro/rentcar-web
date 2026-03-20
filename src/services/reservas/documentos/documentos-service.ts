@@ -27,6 +27,20 @@ class documentosService {
     )
   }
 
+  postDocumentsUpload(reservaId: string, data: any): Promise<any> {
+    return this.handleRequest(
+      api.post(`/reservas/${reservaId}/documents/upload`, data, { headers: this.authHeader() }),
+      'Erro ao fazer upload dos documentos'
+    )
+  }
+
+  postDcoumentsSave(reservaId: string): Promise<any> {
+    return this.handleRequest(
+      api.post(`/reservas/${reservaId}/documents/save`, { headers: this.authHeader() }),
+      'Erro ao salvar documentos'
+    )
+  }
+
 }
 
 export default new documentosService()

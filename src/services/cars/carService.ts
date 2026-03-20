@@ -35,8 +35,12 @@ class carService {
   }
 
   getCarsSearch(segmento: string, plano: string, franquia: string): Promise<any> {
+    const params = new URLSearchParams({ only_available: 'false' })
+    if (segmento) params.set('segmento', segmento)
+    if (plano)    params.set('plano', plano)
+    if (franquia) params.set('franquia', franquia)
     return this.handleRequest(
-      api.get(`/cars/search?segmento=${segmento}&plano=${plano}&franquia=${franquia}`, { headers: this.authHeader() }),
+      api.get(`/cars/search?${params.toString()}`, { headers: this.authHeader() }),
       'Erro ao buscar carros'
     )
   }

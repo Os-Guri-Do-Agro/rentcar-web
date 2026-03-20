@@ -9,12 +9,10 @@ import { useToast } from '@/components/ui/use-toast';
 
 // Services
 import { sendReservationEmailToRental, sendConfirmationEmailToUser } from '@/services/emailService';
-import { 
-    uploadDocumento,
-    salvarTodosDocumentos
-} from '@/services/documentoService';
-import { createReserva, updateReservaStatus } from '@/services/reservaService';
+import reservasService from '@/services/reservas/reservas-services';
+import documentosService from '@/services/reservas/documentos/documentos-service';
 import { carregarDadosUsuario, salvarDadosUsuario } from '@/services/usuarioService';
+import userService from '@/services/user/userService';
 import { getEmailSuporte } from '@/services/configService';
 
 // Components
@@ -81,11 +79,29 @@ const Documentos = () => {
 
     setContextData(dados);
 
-    if (usuario?.id) {
+    const token = localStorage.getItem('token');
+    if (token) {
+        userService.getUsersMe().then(res => {
+            const data = res?.data ?? res;
+            setFormData(prev => ({
+                ...prev,
+                nome: data.nome || '',
+                email: data.email || '',
+                telefone: data.telefone || '',
+                cpf: data.cpf || '',
+                cnh: data.cnh || '',
+                data_nascimento: data.data_nascimento || '',
+                endereco_rua: data.endereco_rua || '',
+                endereco_numero: data.endereco_numero || '',
+                endereco_complemento: data.endereco_complemento || '',
+                endereco_cidade: data.endereco_cidade || '',
+                endereco_estado: data.endereco_estado || '',
+                endereco_cep: data.endereco_cep || '',
+            }));
+        }).catch(() => {}).finally(() => setLoading(false));
+    } else if (usuario?.id) {
         carregarDadosUsuario(usuario.id).then(userData => {
-            if (userData) {
-                setFormData(prev => ({ ...prev, ...userData }));
-            }
+            if (userData) setFormData(prev => ({ ...prev, ...userData }));
             setLoading(false);
         });
     } else {
@@ -174,25 +190,35 @@ const Documentos = () => {
             await salvarDadosUsuario(usuario.id, cleanedUserData);
 
             // Create reservation
-            const response = await createReserva(contextData); 
-            reservaId = response.id;
+            const reserva = contextData.reserva;
+            const response = await reservasService.postReserva({
+                usuario_id:        usuario.id,
+                carro_id:          contextData.carro?.id,
+                data_retirada:     reserva.dataRetirada || reserva.dataInicio,
+                data_devolucao:    reserva.dataDevolucao || reserva.dataFim,
+                valor_total:       reserva.valorTotal ?? 0,
+                tipo_reserva:      contextData.tipoReserva || reserva.tipo_locacao,
+                plano:             reserva.plano,
+                franquia_km:       String(reserva.franquia_km ?? ''),
+                valor_diario:      reserva.valorDiario ?? 0,
+                km_contratado:     reserva.km_contratado ?? 0,
+                km_adicional_valor: reserva.kmExcedente ?? 0,
+                origem_frota:      'site',
+            });
+            reservaId = response?.id ?? response?.data?.id;
             setCreatedReservaId(reservaId);
             console.log(`[FLOW] Reserva criada com sucesso. ID: ${reservaId}`);
         } else {
             console.log(`[FLOW] Step 1: Retomando reserva existente ID: ${reservaId}`);
         }
 
-        // 2. Process Uploads (Only process files not yet successfully uploaded)
+        // 2. Upload documents
         const keysToUpload = Object.keys(filesData).filter(key => filesData[key].status !== 'success');
-        let uploadedDocs = []; // To store successful upload metadata
         let hasErrors = false;
 
-        // Note: In real app we might want to preserve previously uploaded docs if retry happens.
-        // For simplicity, we assume one-shot success or retry of failures.
-        
         for (const key of keysToUpload) {
             const fileObj = filesData[key].file;
-            if (!fileObj) continue; // Should have been caught by validation
+            if (!fileObj) continue;
 
             console.log(`[FLOW] >> Enviando arquivo: ${key}`);
             setFilesData(prev => ({
@@ -200,19 +226,20 @@ const Documentos = () => {
                 [key]: { ...prev[key], status: 'uploading', error: null }
             }));
 
-            const result = await uploadDocumento(fileObj, key, reservaId);
-
-            if (result.success) {
-                uploadedDocs.push(result.data);
+            try {
+                const formData = new FormData();
+                formData.append('file', fileObj);
+                formData.append('tipo', key);
+                await documentosService.postDocumentsUpload(reservaId, formData);
                 setFilesData(prev => ({
                     ...prev,
                     [key]: { ...prev[key], status: 'success', error: null }
                 }));
-            } else {
-                console.error(`[FLOW] Erro no upload ${key}:`, result.error);
+            } catch (err) {
+                console.error(`[FLOW] Erro no upload ${key}:`, err);
                 setFilesData(prev => ({
                     ...prev,
-                    [key]: { ...prev[key], status: 'error', error: result.error }
+                    [key]: { ...prev[key], status: 'error', error: err?.message ?? 'Erro no upload' }
                 }));
                 hasErrors = true;
             }
@@ -222,16 +249,8 @@ const Documentos = () => {
             throw new Error("Alguns documentos falharam. Verifique e tente novamente.");
         }
 
-        // 3. Save All Metadata to DB
-        if (uploadedDocs.length > 0) {
-            console.log("[FLOW] Step 3: Salvando metadados no banco...");
-            const saveResult = await salvarTodosDocumentos(reservaId, uploadedDocs);
-            if (!saveResult.success) throw new Error("Erro ao salvar informações dos documentos.");
-        }
-
-        // 4. Finalize
-        console.log("[FLOW] Step 4: Finalizando reserva...");
-        await updateReservaStatus(reservaId, 'pendente');
+        // 3. Finalize
+        console.log("[FLOW] Step 3: Finalizando reserva...");
         
         // Emails
         const userEmail = formData.email;

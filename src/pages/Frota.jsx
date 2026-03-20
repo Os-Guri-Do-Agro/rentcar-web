@@ -1,13 +1,27 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Car, Users, Building2, ArrowRight, Info, SearchX } from 'lucide-react';
+import { Loader2, Car, Users, Building2, ArrowRight, Info, SearchX, MessageCircle } from 'lucide-react';
 import { useReserva } from '@/context/ReservaContext';
 import { cn } from '@/lib/utils';
-import carPlanosService from '@/services/cars/carPlanosService';
-import { CATEGORIAS as TODAS_CATEGORIAS, CATEGORIAS_POR_TIPO, KM_OPCOES as KM_BASE } from '@/constants/carPlanos';
+import carService from '@/services/cars/carService';
+import { getWhatsAppNumber } from '@/services/configService';
+import { CATEGORIAS as TODAS_CATEGORIAS, CATEGORIAS_POR_TIPO } from '@/constants/carPlanos';
 
-const KM_OPCOES = [{ value: '', label: 'Todas as franquias' }, ...KM_BASE];
+const KM_OPCOES = [
+    { value: '',       label: 'Todas as franquias' },
+    { value: '60km',   label: '60 KM' },
+    { value: '100km',  label: '100 KM' },
+    { value: '120km',  label: '120 KM' },
+    { value: '1000km', label: '1.000 KM' },
+    { value: '1250km', label: '1.250 KM' },
+    { value: '1500km', label: '1.500 KM' },
+    { value: '2000km', label: '2.000 KM' },
+    { value: '3000km', label: '3.000 KM' },
+    { value: '5000km', label: '5.000 KM' },
+    { value: '6000km', label: '6.000 KM' },
+    { value: 'livre',  label: 'KM Livre (+6.000)' },
+];
 
 const SEGMENTO_BADGE = {
     particular:  'bg-blue-100 text-blue-700',
@@ -27,6 +41,7 @@ const Frota = () => {
 
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [whatsapp, setWhatsapp] = useState('');
 
     const [segmento, setSegmento] = useState('particular');
     const [categoria, setCategoria] = useState('');
@@ -48,44 +63,33 @@ const Frota = () => {
     const fetchCars = async () => {
         setLoading(true);
         try {
-            // Usa o endpoint simplificado que não exige km_franquia obrigatório
-            const res = await carPlanosService.getPlanosFiltro(segmento, categoria || undefined);
-            let planosList = res?.data ?? [];
-
-            // Filtra por ativo e km_franquia no client
-            if (kmFranquia !== '') {
-                planosList = planosList.filter(p => p.km_franquia === Number(kmFranquia));
-            }
-            planosList = planosList.filter(p => p.ativo);
-
-            // Agrupa por carro, calcula preço mínimo
-            const carMap = new Map();
-            planosList.forEach(plano => {
-                const carId = plano.carro_id;
-                const preco = Number(plano.preco);
-                if (!carMap.has(carId)) {
-                    carMap.set(carId, {
-                        ...(plano.cars ?? {}),
-                        id: carId,
-                        precoMinimo: preco,
-                    });
-                } else {
-                    const existing = carMap.get(carId);
-                    existing.precoMinimo = Math.min(existing.precoMinimo, preco);
-                }
-            });
-
-            setCars([...carMap.values()]);
+            const res = await carService.getCarsSearch(segmento, categoria, kmFranquia);
+            const carsList = res?.data ?? [];
+            setCars(carsList.map(car => ({
+                ...car,
+                precoMinimo: car.precoMinimo ?? car.preco_minimo,
+            })));
         } catch (e) {
-            console.error('[Frota] Erro ao buscar planos:', e);
+            console.error('[Frota] Erro ao buscar carros:', e);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
+        getWhatsAppNumber().then(n => setWhatsapp(n || ''));
+    }, []);
+
+    useEffect(() => {
         fetchCars();
     }, [segmento, categoria, kmFranquia]);
+
+    const handleCotacao = (car) => {
+        const numero = whatsapp.replace(/\D/g, '');
+        const nome = [car.nome].filter(Boolean).join(' ');
+        const texto = encodeURIComponent(`Olá! Gostaria de solicitar uma cotação para o veículo *${nome}*.`);
+        window.open(`https://wa.me/${numero}?text=${texto}`, '_blank', 'noopener,noreferrer');
+    };
 
     const handleReserve = (car) => {
         setDadosCarro(car);
@@ -212,24 +216,38 @@ const Frota = () => {
                                         <div className="flex justify-between items-end mb-4">
                                             <div>
                                                 <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">
-                                                    {categoriaLabel ?? 'A partir de'}
+                                                    {car.precoMinimo ? (categoriaLabel ?? 'A partir de') : 'Preço'}
                                                 </p>
-                                                <p className="text-2xl font-extrabold text-[#0E3A2F]">
-                                                    R$ {car.precoMinimo?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </p>
+                                                {car.precoMinimo ? (
+                                                    <p className="text-2xl font-extrabold text-[#0E3A2F]">
+                                                        R$ {car.precoMinimo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-lg font-bold text-gray-400">Sob consulta</p>
+                                                )}
                                             </div>
                                             <span className={cn('text-xs px-2 py-1 rounded font-bold uppercase', segmentoBadgeColor)}>
                                                 {segmento}
                                             </span>
                                         </div>
 
-                                        <button
-                                            onClick={() => handleReserve(car)}
-                                            className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-[#00D166] text-[#0E3A2F] hover:bg-[#00F178] hover:shadow-lg"
-                                        >
-                                            <span>Reservar Agora</span>
-                                            <ArrowRight size={18} />
-                                        </button>
+                                        {car.precoMinimo ? (
+                                            <button
+                                                onClick={() => handleReserve(car)}
+                                                className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-[#00D166] text-[#0E3A2F] hover:bg-[#00F178] hover:shadow-lg"
+                                            >
+                                                <span>Reservar Agora</span>
+                                                <ArrowRight size={18} />
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleCotacao(car)}
+                                                className="w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-lg"
+                                            >
+                                                <MessageCircle size={18} />
+                                                <span>Solicitar Cotação</span>
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

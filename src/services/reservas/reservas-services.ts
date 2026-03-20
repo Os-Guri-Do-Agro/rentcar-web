@@ -76,6 +76,13 @@ class reservasService {
     )
   }
 
+  postReserva(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/reservas', data, { headers: this.authHeader() }),
+      'Erro ao criar reserva'
+    )
+  }
+
 }
 
 export default new reservasService()
