@@ -2,22 +2,22 @@ import React, { useState, useEffect } from 'react';
 import mapImage from '@/assets/footer/map.jpg';
 import { Helmet } from 'react-helmet';
 import { Phone, Mail, MapPin, Instagram, Facebook, MessageCircle } from 'lucide-react';
-import { 
-  getWhatsAppNumber, 
-  getEmailSuporte, 
-  getTelefoneSuporte, 
+import {
+  getWhatsAppNumber,
+  getEmailSuporte,
+  getTelefoneSuporte,
   getEnderecoEmpresa,
   getInstagram,
   getFacebook,
-  getMapsUrl
+  getMapsUrl,
 } from '@/services/configService';
-import { 
-    abrirInstagram, 
-    abrirFacebook, 
-    abrirWhatsApp, 
-    abrirEmail, 
-    abrirTelefone, 
-    abrirMaps 
+import {
+    abrirInstagram,
+    abrirFacebook,
+    abrirWhatsApp,
+    abrirEmail,
+    abrirTelefone,
+    abrirMaps,
 } from '@/utils/linkUtils';
 
 const Contato = () => {
@@ -28,7 +28,7 @@ const Contato = () => {
         endereco: '',
         instagram: '',
         facebook: '',
-        maps_url: ''
+        maps_url: '',
     });
 
     useEffect(() => {
@@ -41,9 +41,9 @@ const Contato = () => {
                 getEnderecoEmpresa(),
                 getInstagram(),
                 getFacebook(),
-                getMapsUrl()
+                getMapsUrl(),
             ]);
-            
+
             setConfig({
                 whatsapp: whatsapp || '',
                 email: email || '',
@@ -51,7 +51,7 @@ const Contato = () => {
                 endereco: endereco || '',
                 instagram: instagram || '',
                 facebook: facebook || '',
-                maps_url: maps_url || ''
+                maps_url: maps_url || '',
             });
         };
         loadConfigs();

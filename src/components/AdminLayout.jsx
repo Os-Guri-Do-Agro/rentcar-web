@@ -10,13 +10,14 @@ import { useAdminMode } from '@/context/AdminModeContext';
 
 const AdminLayout = () => {
   const { logout, usuario } = useAuth();
-  const { exitAdminMode } = useAdminMode();
+  const { setIsAdminMode } = useAdminMode();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleExitAdmin = () => {
-    exitAdminMode();
-    navigate('/');
+    setIsAdminMode(false);
+    localStorage.clear();
+    window.location.reload();
   };
 
   const navItems = [
@@ -54,7 +55,7 @@ const AdminLayout = () => {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-6 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-[#00D166]">Admin Panel</h2>
+          <h2 className="text-2xl font-bold text-[#00D166]">Painel Admin</h2>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-white">
             <X size={24} />
           </button>

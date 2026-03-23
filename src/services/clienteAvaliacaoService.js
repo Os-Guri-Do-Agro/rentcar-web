@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabaseClient';
 
 export const getClienteAvaliacao = async (clienteId) => {
-    console.log(`[AvaliacaoService] Buscando avaliação para cliente: ${clienteId}`);
     try {
         const { data, error } = await supabase
             .from('cliente_avaliacoes')
@@ -18,7 +17,6 @@ export const getClienteAvaliacao = async (clienteId) => {
 };
 
 export const updateClienteAvaliacao = async (clienteId, nota, notasPessoais, adminId) => {
-    console.log(`[AvaliacaoService] Atualizando avaliação cliente: ${clienteId}, Nota: ${nota}`);
     try {
         const { data: existing } = await supabase
             .from('cliente_avaliacoes')
@@ -32,13 +30,9 @@ export const updateClienteAvaliacao = async (clienteId, nota, notasPessoais, adm
             avaliacaoId = existing.id;
             const { error: updateError } = await supabase
                 .from('cliente_avaliacoes')
-                .update({ 
-                    nota, 
-                    notas_pessoais: notasPessoais, 
-                    atualizado_em: new Date().toISOString() 
-                })
+                .update({ nota, notas_pessoais: notasPessoais, atualizado_em: new Date().toISOString() })
                 .eq('id', avaliacaoId);
-            
+
             if (updateError) throw updateError;
 
             await supabase.from('cliente_avaliacoes_historico').insert({
@@ -49,23 +43,17 @@ export const updateClienteAvaliacao = async (clienteId, nota, notasPessoais, adm
                 notas_novas: notasPessoais,
                 atualizado_por: adminId
             });
-
         } else {
             const { data: newAval, error: createError } = await supabase
                 .from('cliente_avaliacoes')
-                .insert({
-                    cliente_id: clienteId,
-                    nota,
-                    notas_pessoais: notasPessoais,
-                    criado_por: adminId
-                })
+                .insert({ cliente_id: clienteId, nota, notas_pessoais: notasPessoais, criado_por: adminId })
                 .select()
                 .single();
-            
+
             if (createError) throw createError;
             avaliacaoId = newAval.id;
 
-             await supabase.from('cliente_avaliacoes_historico').insert({
+            await supabase.from('cliente_avaliacoes_historico').insert({
                 avaliacao_id: avaliacaoId,
                 nota_anterior: null,
                 nota_nova: nota,
@@ -83,14 +71,13 @@ export const updateClienteAvaliacao = async (clienteId, nota, notasPessoais, adm
 };
 
 export const getClienteAvaliacaoHistorico = async (clienteId) => {
-    console.log(`[AvaliacaoService] Buscando histórico para cliente: ${clienteId}`);
     try {
         const { data: aval } = await supabase
             .from('cliente_avaliacoes')
             .select('id')
             .eq('cliente_id', clienteId)
             .maybeSingle();
-        
+
         if (!aval) return [];
 
         const { data: hist, error } = await supabase
@@ -108,35 +95,21 @@ export const getClienteAvaliacaoHistorico = async (clienteId) => {
 };
 
 export const getClienteReservas = async (clienteId) => {
-  console.log(`[AvaliacaoService] Buscando reservas do cliente: ${clienteId}`);
-  try {
-    const { data, error } = await supabase
-      .from('reservas')
-      .select(`
-        *,
-        cars:cars!reservas_carro_id_fkey(
-          marca,
-          nome,
-          placa,
-          ano,
-          cor
-        ),
-        reserva_documentos(*)
-      `)
-      .eq('usuario_id', clienteId)
-      .order('created_at', { ascending: false });
+    try {
+        const { data, error } = await supabase
+            .from('reservas')
+            .select(`
+                *,
+                cars:cars!reservas_carro_id_fkey(marca, nome, placa, ano, cor),
+                reserva_documentos(*)
+            `)
+            .eq('usuario_id', clienteId)
+            .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    
-    console.log("[AvaliacaoService] Reservas carregadas com sucesso. Quantidade:", data?.length);
-    if(data && data.length > 0) {
-        console.log("[AvaliacaoService] Reserva Exemplo:", data[0]);
-        console.log("[AvaliacaoService] Documentos Exemplo:", data[0].reserva_documentos);
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        console.error(`[AvaliacaoService] Erro ao buscar reservas:`, error);
+        return [];
     }
-    
-    return data;
-  } catch (error) {
-    console.error(`[AvaliacaoService] Erro ao buscar reservas:`, error);
-    return [];
-  }
 };

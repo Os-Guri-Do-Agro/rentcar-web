@@ -8,11 +8,8 @@ import { useReserva } from '@/context/ReservaContext';
 import { useToast } from '@/components/ui/use-toast';
 
 // Services
-import { sendReservationEmailToRental, sendConfirmationEmailToUser } from '@/services/emailService';
 import reservasService from '@/services/reservas/reservas-services';
-import { carregarDadosUsuario } from '@/services/usuarioService';
 import userService from '@/services/user/userService';
-import { getEmailSuporte } from '@/services/configService';
 
 // Mapeia chave interna → tipo aceito pela API
 const DOC_TYPE_MAP = {
@@ -120,10 +117,11 @@ const Documentos = () => {
             }));
         }).catch(() => {}).finally(() => setLoading(false));
     } else if (usuario?.id) {
-        carregarDadosUsuario(usuario.id).then(userData => {
+        userService.getUserById(usuario.id).then(res => {
+            const userData = res?.data ?? res;
             if (userData) setFormData(prev => ({ ...prev, ...userData }));
             setLoading(false);
-        });
+        }).catch(() => setLoading(false));
     } else {
         setLoading(false);
     }
@@ -243,20 +241,9 @@ const Documentos = () => {
             payload.append('files', namedFile);
         });
 
-        console.log("Payload enviado:", Object.fromEntries(payload.entries()));
-
         const response = await reservasService.postReservaComArquivos(payload);
         const reservaId = response?.id ?? response?.data?.id;
         
-        // Emails
-        const userEmail = formData.email;
-        if (userEmail) {
-            getEmailSuporte().then(rentalEmail => {
-                 sendReservationEmailToRental(reservaId, rentalEmail, formData, contextData.carro);
-                 sendConfirmationEmailToUser(reservaId, userEmail, formData, contextData.carro);
-            }).catch(e => console.error("Erro ao enviar emails:", e));
-        }
-
         toast({ title: "Reserva Realizada!", description: "Documentos enviados com sucesso.", className: "bg-green-600 text-white" });
         limparDados();
         navigate(`/confirmacao-reserva/${reservaId}`);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Save } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { carregarDadosUsuario, salvarDadosUsuario } from '@/services/usuarioService';
+import userService from '@/services/user/userService';
 
 const DadosPessoaisForm = ({ usuarioId, dadosIniciais, onSalvar }) => {
     const { toast } = useToast();
@@ -27,8 +27,9 @@ const DadosPessoaisForm = ({ usuarioId, dadosIniciais, onSalvar }) => {
         const loadData = async () => {
             if (usuarioId) {
                 console.log('Carregando dados do usuário para form:', usuarioId);
-                const data = await carregarDadosUsuario(usuarioId);
-                
+                const res = await userService.getUserById(usuarioId);
+                const data = res?.data ?? res;
+
                 if (data) {
                     // Ensure we populate state with db keys
                     setFormData(prev => ({ ...prev, ...data }));
@@ -97,16 +98,10 @@ const DadosPessoaisForm = ({ usuarioId, dadosIniciais, onSalvar }) => {
         
         setSaving(true);
         try {
-            const response = await salvarDadosUsuario(usuarioId, dataToSave);
-            
-            if (response.success) {
-                console.log('[DadosPessoaisForm] Dados salvos no perfil');
-                toast({ title: "Sucesso", description: "Dados atualizados com sucesso!" });
-                if (onSalvar) onSalvar(dataToSave);
-            } else {
-                console.error('[DadosPessoaisForm] Erro na resposta:', response);
-                toast({ title: "Erro", description: response.error || "Erro ao salvar dados.", variant: "destructive" });
-            }
+            await userService.patchUserById(usuarioId, dataToSave);
+            console.log('[DadosPessoaisForm] Dados salvos no perfil');
+            toast({ title: "Sucesso", description: "Dados atualizados com sucesso!" });
+            if (onSalvar) onSalvar(dataToSave);
         } catch (error) {
             console.error('[DadosPessoaisForm] Exceção:', error);
             toast({ title: "Erro", description: "Erro interno ao processar requisição.", variant: "destructive" });

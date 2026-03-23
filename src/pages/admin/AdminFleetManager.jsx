@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Plus, Edit2, Trash2, Search, Image as ImageIcon, RefreshCw, DollarSign, AlertTriangle, ArrowLeft, Check, X, Power, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Plus, Edit2, Trash2, Search, Image as ImageIcon, RefreshCw, DollarSign, AlertTriangle, ArrowLeft, Check, X, Power, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import CarPricingModal from '@/components/admin/CarPricingModal';
@@ -134,9 +134,14 @@ const AdminFleetManager = () => {
           <h1 className="text-3xl font-bold text-[#0E3A2F]">Gestor de Frota</h1>
           <p className="text-gray-500">Controle total de veículos, disponibilidade e preços.</p>
         </div>
-        <button onClick={() => navigate('/admin/car/new')} className="bg-[#00D166] text-[#0E3A2F] px-5 py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-[#00F178] shadow-md transition-all">
-          <Plus size={20} /> Adicionar Carro
-        </button>
+        <div className="flex gap-3">
+          <button onClick={() => navigate('/admin/carros-destaque')} className="bg-white border border-gray-200 text-[#0E3A2F] px-5 py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-50 shadow-sm transition-all">
+            <Star size={20} className="text-yellow-400 fill-yellow-400" /> Destaques
+          </button>
+          <button onClick={() => navigate('/admin/car/new')} className="bg-[#00D166] text-[#0E3A2F] px-5 py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-[#00F178] shadow-md transition-all">
+            <Plus size={20} /> Adicionar Carro
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
@@ -145,7 +150,7 @@ const AdminFleetManager = () => {
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
              <input type="text" placeholder="Buscar placa ou modelo..." className="w-full pl-9 pr-4 py-2 border rounded-lg focus:ring-[#00D166] outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <button onClick={fetchCars} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" title="Atualizar">
+          <button onClick={() => fetchCars()} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" title="Atualizar">
               <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
           </button>
         </div>

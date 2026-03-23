@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
-import { calcularDuracao } from './reservaService';
+import { calcularDuracao } from '@/lib/dateUtils';
 import { getColumnName } from './carPricingService';
 
 export const calculateWeeklyPrice = (total, plan) => {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { createReserva, getUserReservas, cancelReserva as cancelReservaService } from '@/services/reservaService';
+import reservasService from '@/services/reservas/reservas-services';
 
 export const useReservas = () => {
   const [reservas, setReservas] = useState([]);
@@ -9,8 +9,8 @@ export const useReservas = () => {
   const fetchReservas = useCallback(async (userId) => {
     setLoading(true);
     try {
-      const data = await getUserReservas(userId);
-      setReservas(data);
+      const res = await reservasService.getMyReservas();
+      setReservas(res?.data ?? res ?? []);
     } catch (err) {
       setError(err);
       console.error(err);
@@ -22,7 +22,8 @@ export const useReservas = () => {
   const create = async (userId, carId, dataInicio, dataFim, valorTotal) => {
     setLoading(true);
     try {
-      const newReserva = await createReserva(userId, carId, dataInicio, dataFim, valorTotal);
+      const res = await reservasService.postReserva({ usuario_id: userId, carro_id: carId, data_retirada: dataInicio, data_devolucao: dataFim, valor_total: valorTotal });
+      const newReserva = res?.data ?? res;
       setReservas(prev => [newReserva, ...prev]);
       return newReserva;
     } catch (err) {
@@ -36,7 +37,8 @@ export const useReservas = () => {
   const cancel = async (reservaId) => {
     setLoading(true);
     try {
-      const updatedReserva = await cancelReservaService(reservaId);
+      const res = await reservasService.patchCancelReserva(reservaId);
+      const updatedReserva = res?.data ?? res;
       setReservas(prev => prev.map(r => r.id === reservaId ? updatedReserva : r));
       return updatedReserva;
     } catch (err) {

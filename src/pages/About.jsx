@@ -8,7 +8,7 @@ import {
   getEnderecoEmpresa,
   getInstagram,
   getFacebook,
-  getMapsUrl
+  getMapsUrl,
 } from '@/services/configService';
 import {
   abrirInstagram,
@@ -16,7 +16,7 @@ import {
   abrirWhatsApp,
   abrirEmail,
   abrirTelefone,
-  abrirMaps
+  abrirMaps,
 } from '@/utils/linkUtils';
 
 

@@ -14,12 +14,9 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, 
     DialogDescription, DialogFooter 
 } from "@/components/ui/dialog";
-import { 
-    getClienteAvaliacaoHistorico,
-    getClienteReservas 
-} from '@/services/clienteAvaliacaoService';
 import userService from '@/services/user/userService';
 import clientesService from '@/services/avaliacoes/clientes/clientes-service';
+import reservasServices from '@/services/reservas/reservas-services';
 
 const AdminDetalhesCliente = () => {
     const { clienteId } = useParams();
@@ -29,7 +26,7 @@ const AdminDetalhesCliente = () => {
 
     const [cliente, setCliente] = useState(null);
     const [avaliacao, setAvaliacao] = useState(null);
-    const [historicoAvaliacao, setHistoricoAvaliacao] = useState([]);
+    const [historicoAvaliacao] = useState([]);
     const [reservas, setReservas] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -67,11 +64,8 @@ const AdminDetalhesCliente = () => {
                 setEditNotasPessoais(av.notas_pessoais || '');
             }
 
-            const hist = await getClienteAvaliacaoHistorico(clienteId);
-            setHistoricoAvaliacao(hist);
-
-            const res = await getClienteReservas(clienteId);
-            setReservas(res);
+const reservasRes = await reservasServices.getReservvasByUserId(clienteId);
+            setReservas(reservasRes?.data ?? []);
 
         } catch (error) {
             console.error("Erro ao buscar dados do cliente:", error);
@@ -100,43 +94,16 @@ const AdminDetalhesCliente = () => {
         }
     };
 
-    const getStatusBadge = (reserva) => {
-        const hasDocs = reserva.reserva_documentos && reserva.reserva_documentos.length > 0;
-        const status = reserva.status;
-
-        if (status === 'cancelada') {
-            return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
-                    <XCircle size={12} /> Cancelada
-                </span>
-            );
-        }
-        if (status === 'confirmada') {
-            return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
-                    <CheckCircle size={12} /> Confirmada
-                </span>
-            );
-        }
-        
-        // Custom logic for documents
-        if (hasDocs) {
-            return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
-                    <FileCheck size={12} /> Documentos Entregues
-                </span>
-            );
-        }
-
-        if (status === 'aguardando_documentos' || status === 'pendente') {
-            return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                    <Clock size={12} /> Aguardando Docs
-                </span>
-            );
-        }
-
-        return (
+    const getStatusBadge = (status) => {
+        const map = {
+            cancelada:            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200"><XCircle size={12} /> Cancelada</span>,
+            confirmada:           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200"><CheckCircle size={12} /> Confirmada</span>,
+            ativa:                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200"><CheckCircle size={12} /> Ativa</span>,
+            aguardando_documentos:<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200"><Clock size={12} /> Aguardando Docs</span>,
+            pendente:             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200"><Clock size={12} /> Pendente</span>,
+            concluida:            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200"><FileCheck size={12} /> Concluída</span>,
+        };
+        return map[status] ?? (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">
                 <AlertTriangle size={12} /> {status}
             </span>
@@ -295,14 +262,12 @@ const AdminDetalhesCliente = () => {
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Veículo</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Período</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Valor</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-center">Docs</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Status</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">Ação</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {reservas.map(res => {
-                                        const docCount = res.reserva_documentos?.length || 0;
                                         return (
                                             <tr key={res.id} className="hover:bg-gray-50 transition-colors group">
                                                 <td className="px-6 py-4">
@@ -322,14 +287,8 @@ const AdminDetalhesCliente = () => {
                                                 <td className="px-6 py-4 font-bold text-[#00D166] whitespace-nowrap">
                                                     R$ {parseFloat(res.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                                                 </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold ${docCount > 0 ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                                                        <FileText size={12} />
-                                                        {docCount}
-                                                    </div>
-                                                </td>
                                                 <td className="px-6 py-4">
-                                                    {getStatusBadge(res)}
+                                                    {getStatusBadge(res.status)}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <button 

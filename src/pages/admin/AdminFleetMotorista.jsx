@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { Loader2, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { deleteCar } from '@/services/carService';
+import carService from '@/services/cars/carService';
 
 const AdminFleetMotorista = () => {
   const [cars, setCars] = useState([]);
@@ -42,7 +42,7 @@ const AdminFleetMotorista = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Excluir este veículo?")) return;
     try {
-      await deleteCar(id);
+      await carService.deleteCarById(id);
       setCars(cars.filter(c => c.id !== id));
       toast({ title: "Carro excluído" });
     } catch (e) {

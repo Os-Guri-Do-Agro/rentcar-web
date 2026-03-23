@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Loader2, Upload, ArrowLeft, Image as ImageIcon, CheckSquare, User, Briefcase, Building2, CheckCircle2, AlertCircle, Settings } from 'lucide-react';
-import { createCar } from '@/services/carService';
 import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';

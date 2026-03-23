@@ -41,6 +41,13 @@ class reservasService {
     )
   }
 
+  getReservvasByUserId(userId: string): Promise<any> {
+    return this.handleRequest(
+      api.get(`/reservas/user/${userId}`, { headers: this.authHeader() }),
+      'Erro ao buscar reservas por usuário'
+    )
+  }
+
   patchStatusReserva(id: string, data: any): Promise<any> {
     return this.handleRequest(
       api.patch(`/reservas/${id}/status`, data, { headers: this.authHeader() }),

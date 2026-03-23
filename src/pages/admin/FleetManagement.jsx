@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { fetchAllCars, deleteCar, updateCar } from '@/services/carService';
+import carService from '@/services/cars/carService';
 import { useToast } from '@/components/ui/use-toast';
 
 const FleetManagement = () => {
@@ -11,8 +11,8 @@ const FleetManagement = () => {
 
   const loadCars = async () => {
     try {
-      const data = await fetchAllCars(false); // Fetch all, including unavailable
-      setCars(data);
+      const res = await carService.getCars('false', ''); // Fetch all, including unavailable
+      setCars(res?.data ?? res ?? []);
     } catch (error) {
       toast({ title: "Erro ao carregar frota", variant: "destructive" });
     } finally {
@@ -28,7 +28,7 @@ const FleetManagement = () => {
     if (!window.confirm("Tem certeza que deseja excluir este veículo?")) return;
     
     try {
-      await deleteCar(id);
+      await carService.deleteCarById(id);
       setCars(cars.filter(c => c.id !== id));
       toast({ title: "Veículo excluído com sucesso" });
     } catch (error) {
@@ -38,7 +38,8 @@ const FleetManagement = () => {
 
   const toggleAvailability = async (car) => {
     try {
-      const updated = await updateCar(car.id, { disponivel: !car.disponivel });
+      const res = await carService.patchCarById(car.id, { disponivel: !car.disponivel });
+      const updated = res?.data ?? res;
       setCars(cars.map(c => c.id === car.id ? updated : c));
       toast({ title: `Veículo ${!car.disponivel ? 'ativado' : 'desativado'}` });
     } catch (error) {

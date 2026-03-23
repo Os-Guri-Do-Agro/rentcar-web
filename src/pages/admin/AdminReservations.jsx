@@ -123,7 +123,7 @@ const AdminReservations = () => {
                   <th className="px-6 py-4">Cliente</th>
                   <th className="px-6 py-4">Veículo</th>
                   <th className="px-6 py-4">Período</th>
-                  <th className="px-6 py-4">Docs</th>
+                  <th className="px-6 py-4"> </th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Ações</th>
                 </tr>

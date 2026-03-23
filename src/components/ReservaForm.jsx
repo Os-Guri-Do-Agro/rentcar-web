@@ -3,7 +3,7 @@ import { Loader2, AlertTriangle, Gauge, Users, Car, Building2 } from 'lucide-rea
 import { useNavigate } from 'react-router-dom';
 import DateRangeSelector from './DateRangeSelector';
 import ResumoPrecoSimulacao from './ResumoPrecoSimulacao';
-import { calcularDataDevolucao, calcularDuracao } from '@/services/reservaService';
+import { calcularDataDevolucao, calcularDuracao } from '@/lib/dateUtils';
 import { CATEGORIAS, KM_OPCOES } from '@/constants/carPlanos';
 import carPlanosService from '@/services/cars/carPlanosService';
 import { useReserva } from '@/context/ReservaContext';

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { fetchAllCars, updateCarPrice, fetchPriceHistory } from '@/services/carService';
+import { updateCarPrice, fetchPriceHistory } from '@/services/priceHistoryService';
+import carService from '@/services/cars/carService';
 import { Loader2, Save, TrendingDown, TrendingUp, History } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -16,10 +17,11 @@ const PriceControl = () => {
 
   const loadData = async () => {
     try {
-      const [carsData, historyData] = await Promise.all([
-        fetchAllCars(false),
+      const [carsRes, historyData] = await Promise.all([
+        carService.getCars('false', ''),
         fetchPriceHistory()
       ]);
+      const carsData = carsRes?.data ?? carsRes ?? [];
       setCars(carsData);
       setPriceHistory(historyData);
       

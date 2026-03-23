@@ -27,6 +27,27 @@ class carDestaqueService {
     )
   }
 
+  postCarsDestaque(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/destaque', data, { headers: this.authHeader() }),
+      'Erro ao cadastrar carro em destaque'
+    )
+  }
+
+  deleteCarsDestaque(carroId : string): Promise<any> {
+    return this.handleRequest(
+      api.delete(`/destaque/${carroId }`, { headers: this.authHeader() }),
+      'Erro ao remover carro em destaque'
+    )
+  }
+
+  patchCarsReorder(data: any): Promise<any> {
+    return this.handleRequest(
+      api.patch('/destaque/reorder', data, { headers: this.authHeader() }),
+      'Erro ao reorder carros em destaque'
+    )
+  }
+
 }
 
 export default new carDestaqueService()

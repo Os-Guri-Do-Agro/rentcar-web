@@ -2,22 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Phone, Mail, MapPin, Instagram, Facebook, Linkedin, MessageCircle, Map } from 'lucide-react';
 import mapImage from '@/assets/footer/map.jpg';
 import { Link } from 'react-router-dom';
-import { 
-  getWhatsAppNumber, 
-  getEmailSuporte, 
-  getTelefoneSuporte, 
+import {
+  getWhatsAppNumber,
+  getEmailSuporte,
+  getTelefoneSuporte,
   getEnderecoEmpresa,
   getInstagram,
   getFacebook,
-  getMapsUrl
+  getMapsUrl,
 } from '@/services/configService';
-import { 
-    abrirInstagram, 
-    abrirFacebook, 
-    abrirWhatsApp, 
-    abrirEmail, 
-    abrirTelefone, 
-    abrirMaps 
+import {
+    abrirInstagram,
+    abrirFacebook,
+    abrirWhatsApp,
+    abrirEmail,
+    abrirTelefone,
+    abrirMaps,
 } from '@/utils/linkUtils';
 
 const Footer = () => {
@@ -29,7 +29,7 @@ const Footer = () => {
     endereco: '',
     instagram: '',
     facebook: '',
-    // maps_url: ''
+    maps_url: '',
   });
 
   useEffect(() => {
@@ -42,9 +42,9 @@ const Footer = () => {
             getEnderecoEmpresa(),
             getInstagram(),
             getFacebook(),
-            getMapsUrl()
+            getMapsUrl(),
         ]);
-        
+
         setConfig({
             whatsapp: whatsapp || '',
             email: email || '',
@@ -52,7 +52,7 @@ const Footer = () => {
             endereco: endereco || '',
             instagram: instagram || '',
             facebook: facebook || '',
-            // maps_url: maps_url || ''
+            maps_url: maps_url || '',
         });
     };
     loadConfigs();
@@ -139,7 +139,7 @@ const Footer = () => {
                 <MapPin size={32} className="text-white" />
               </div>
             </div>
-            <p className="text-xs text-center mt-2 text-gray-500 hover:text-[#00D166]" onClick={() => abrirMaps(config.maps_url)}>Clique para abrir no mapa</p>
+            <p className="text-xs text-center mt-2 text-gray-500 hover:text-[#00D166] cursor-pointer" onClick={() => abrirMaps(config.maps_url)}>Clique para abrir no mapa</p>
           </div>
         </div>
 

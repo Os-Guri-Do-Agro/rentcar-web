@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { supabase } from '@/lib/supabaseClient';
 import { Loader2, ArrowLeft, FileText } from 'lucide-react';
-import { getReservaById } from '@/services/reservaService';
 import DocumentosDisplay from '@/components/DocumentosDisplay';
 import reservasServices from '@/services/reservas/reservas-services';
 

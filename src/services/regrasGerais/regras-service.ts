@@ -27,6 +27,27 @@ class regrasService {
     )
   }
 
+  postRegas(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/regras', data, { headers: this.authHeader() }),
+      'Erro ao cadastrar regra'
+    )
+  }
+
+  patchRegras(id: string, data: any): Promise<any> {
+    return this.handleRequest(
+      api.patch(`/regras/${id}`, data, { headers: this.authHeader() }),
+      'Erro ao atualizar regra'
+    )
+  }
+
+  deleteRegras(id: string): Promise<any> {
+    return this.handleRequest(
+      api.delete(`/regras/${id}`, { headers: this.authHeader() }),
+      'Erro ao deletar regra'
+    )
+  }
+
 }
 
 export default new regrasService()

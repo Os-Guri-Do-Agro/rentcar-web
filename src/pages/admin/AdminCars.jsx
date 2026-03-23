@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Plus, Edit2, Trash2, DollarSign, Search } from 'lucide-react';
-import { fetchAllCars, deleteCar } from '@/services/carService';
+import carService from '@/services/cars/carService';
 import { useToast } from '@/components/ui/use-toast';
 
 const AdminCars = () => {
@@ -18,8 +18,8 @@ const AdminCars = () => {
 
     const loadCars = async () => {
         try {
-            const data = await fetchAllCars(false); // Fetch all, including unavailable
-            setCars(data);
+            const res = await carService.getCars('false', ''); // Fetch all, including unavailable
+            setCars(res?.data ?? res ?? []);
         } catch (error) {
             toast({ title: "Erro ao carregar carros", variant: "destructive" });
         } finally {
@@ -30,7 +30,7 @@ const AdminCars = () => {
     const handleDelete = async (id) => {
         if (!window.confirm("Tem certeza que deseja excluir este carro?")) return;
         try {
-            await deleteCar(id);
+            await carService.deleteCarById(id);
             toast({ title: "Carro excluído" });
             loadCars();
         } catch (error) {

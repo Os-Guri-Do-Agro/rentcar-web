@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Autoplay, Pagination } from 'swiper/modules';
 import { Star, Quote, Loader2 } from 'lucide-react';
-import { getAvaliacoes } from '@/services/avaliacoesService';
 import { supabase } from '@/lib/supabaseClient';
 import 'swiper/css';
 import 'swiper/css/navigation';
