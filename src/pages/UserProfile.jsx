@@ -49,7 +49,7 @@ const Section = ({ title, icon: Icon, children, isEditing, onEdit, onSave, onCan
   </motion.div>
 );
 
-const InputGroup = ({ label, value, onChange, disabled, type = "text", placeholder }) => (
+const InputGroup = ({ label, value, onChange, disabled, type = "text", placeholder, maxLength }) => (
   <div className="mb-4">
     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{label}</label>
     <input
@@ -58,6 +58,7 @@ const InputGroup = ({ label, value, onChange, disabled, type = "text", placehold
       onChange={onChange}
       disabled={disabled}
       placeholder={placeholder}
+      maxLength={maxLength}
       className={`w-full p-2.5 rounded-lg border ${disabled ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-2 focus:ring-[#00D166] focus:border-transparent'} transition-all outline-none`}
     />
   </div>
@@ -84,7 +85,7 @@ const UserProfile = () => {
         email: data.email || '',
         telefone: data.telefone || '',
         cpf: data.cpf || '',
-        data_nascimento: data.data_nascimento || '',
+        data_nascimento: data.data_nascimento?.split('T')[0] || '',
         endereco_rua: data.endereco_rua || '',
         endereco_numero: data.endereco_numero || '',
         endereco_complemento: data.endereco_complemento || '',
@@ -107,6 +108,18 @@ const UserProfile = () => {
   useEffect(() => {
     findUserInfo()
   }, []);
+
+  const masks = {
+    cpf:           v => v.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4').replace(/(\d{3})(\d{3})(\d{0,3})/, '$1.$2.$3').replace(/(\d{3})(\d{0,3})/, '$1.$2'),
+    telefone:      v => v.replace(/\D/g, '').slice(0, 11).replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3').replace(/^(\d{2})(\d{0,5})/, '($1) $2'),
+    endereco_cep:  v => v.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d{0,3})/, '$1-$2'),
+    endereco_estado: v => v.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase(),
+  };
+
+  const handleChange = (field, value) => {
+    const masked = masks[field] ? masks[field](value) : value;
+    setFormData(prev => ({ ...prev, [field]: masked }));
+  };
 
   const handleUpdate = async (section, data) => {
     setLoading(true);
@@ -157,6 +170,9 @@ const UserProfile = () => {
     }
   };
 
+  const IDENTITY_FIELDS = ['nome', 'cpf', 'data_nascimento', 'telefone', 'cnh', 'endereco_rua', 'endereco_numero', 'endereco_cidade', 'endereco_estado', 'endereco_cep'];
+  const isVerificado = IDENTITY_FIELDS.every(f => !!formData[f]);
+
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#00D166]" size={40} /></div>;
 
   return (
@@ -199,25 +215,27 @@ const UserProfile = () => {
             onSave={() => handleUpdate('personal', { nome: formData.nome, cpf: formData.cpf, data_nascimento: formData.data_nascimento })}
             loading={loading}
           >
-            <InputGroup 
-              label="Nome Completo" 
-              value={formData.nome} 
-              onChange={(e) => setFormData({...formData, nome: e.target.value})} 
+            <InputGroup
+              label="Nome Completo"
+              value={formData.nome}
+              onChange={(e) => handleChange('nome', e.target.value)}
               disabled={!personalEditing}
+              maxLength={100}
             />
             <div className="grid grid-cols-2 gap-4">
-              <InputGroup 
-                label="CPF" 
+              <InputGroup
+                label="CPF"
                 value={personalEditing ? formData.cpf : formatCPF(formData.cpf)}
-                onChange={(e) => setFormData({...formData, cpf: e.target.value})} 
+                onChange={(e) => handleChange('cpf', e.target.value)}
                 disabled={!personalEditing}
                 placeholder="000.000.000-00"
+                maxLength={14}
               />
-              <InputGroup 
-                label="Data de Nascimento" 
+              <InputGroup
+                label="Data de Nascimento"
                 type="date"
-                value={formData.data_nascimento} 
-                onChange={(e) => setFormData({...formData, data_nascimento: e.target.value})} 
+                value={formData.data_nascimento}
+                onChange={(e) => handleChange('data_nascimento', e.target.value)}
                 disabled={!personalEditing}
               />
             </div>
@@ -241,12 +259,13 @@ const UserProfile = () => {
               value={formData.email} 
               disabled={true} 
             />
-            <InputGroup 
-              label="Telefone / WhatsApp" 
+            <InputGroup
+              label="Telefone / WhatsApp"
               value={contactEditing ? formData.telefone : formatPhone(formData.telefone)}
-              onChange={(e) => setFormData({...formData, telefone: e.target.value})} 
+              onChange={(e) => handleChange('telefone', e.target.value)}
               disabled={!contactEditing}
               placeholder="(00) 00000-0000"
+              maxLength={15}
             />
           </Section>
 
@@ -281,50 +300,56 @@ const UserProfile = () => {
             >
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                  <div className="md:col-span-1">
-                    <InputGroup 
-                      label="CEP" 
+                    <InputGroup
+                      label="CEP"
                       value={addressEditing ? formData.endereco_cep : formatCEP(formData.endereco_cep)}
-                      onChange={(e) => setFormData({...formData, endereco_cep: e.target.value})} 
+                      onChange={(e) => handleChange('endereco_cep', e.target.value)}
                       disabled={!addressEditing}
                       placeholder="00000-000"
+                      maxLength={9}
                     />
                  </div>
                  <div className="md:col-span-2">
-                    <InputGroup 
-                      label="Rua / Avenida" 
-                      value={formData.endereco_rua} 
-                      onChange={(e) => setFormData({...formData, endereco_rua: e.target.value})} 
+                    <InputGroup
+                      label="Rua / Avenida"
+                      value={formData.endereco_rua}
+                      onChange={(e) => handleChange('endereco_rua', e.target.value)}
                       disabled={!addressEditing}
+                      maxLength={100}
                     />
                  </div>
                  <div className="md:col-span-1">
-                    <InputGroup 
-                      label="Número" 
-                      value={formData.endereco_numero} 
-                      onChange={(e) => setFormData({...formData, endereco_numero: e.target.value})} 
+                    <InputGroup
+                      label="Número"
+                      value={formData.endereco_numero}
+                      onChange={(e) => handleChange('endereco_numero', e.target.value)}
                       disabled={!addressEditing}
+                      maxLength={10}
                     />
                  </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 <InputGroup 
-                    label="Complemento" 
-                    value={formData.endereco_complemento} 
-                    onChange={(e) => setFormData({...formData, endereco_complemento: e.target.value})} 
+                 <InputGroup
+                    label="Complemento"
+                    value={formData.endereco_complemento}
+                    onChange={(e) => handleChange('endereco_complemento', e.target.value)}
                     disabled={!addressEditing}
+                    maxLength={50}
                  />
-                 <InputGroup 
-                    label="Cidade" 
-                    value={formData.endereco_cidade} 
-                    onChange={(e) => setFormData({...formData, endereco_cidade: e.target.value})} 
+                 <InputGroup
+                    label="Cidade"
+                    value={formData.endereco_cidade}
+                    onChange={(e) => handleChange('endereco_cidade', e.target.value)}
                     disabled={!addressEditing}
+                    maxLength={60}
                  />
-                 <InputGroup 
-                    label="Estado (UF)" 
-                    value={formData.endereco_estado} 
-                    onChange={(e) => setFormData({...formData, endereco_estado: e.target.value})} 
+                 <InputGroup
+                    label="Estado (UF)"
+                    value={formData.endereco_estado}
+                    onChange={(e) => handleChange('endereco_estado', e.target.value)}
                     disabled={!addressEditing}
                     placeholder="SP"
+                    maxLength={2}
                  />
               </div>
             </Section>
@@ -355,7 +380,9 @@ const UserProfile = () => {
                         <p className="text-xs font-bold text-gray-500 uppercase mb-1">Status da Conta</p>
                         <p className="text-sm font-medium text-gray-700">Verificação de identidade</p>
                       </div>
-                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">Pendente</span>
+                      <span className={`px-3 py-1 text-xs font-bold rounded-full ${isVerificado ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {isVerificado ? 'Verificada' : 'Pendente'}
+                      </span>
                    </div>
                 </div>
              </Section>

@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from 'react-router-dom';
 
 const TermosModal = ({ open, onAccept, onCancel }) => {
-    console.log("[TermosModal] Render", open);
-    const [checks, setChecks] = useState({ termos: false, privacidade: false, lgpd: false });
-
-    const allChecked = checks.termos && checks.privacidade && checks.lgpd;
+    const [aceito, setAceito] = useState(false);
 
     return (
         <Dialog open={open} onOpenChange={(val) => !val && onCancel()}>
@@ -15,36 +11,33 @@ const TermosModal = ({ open, onAccept, onCancel }) => {
                 <DialogHeader>
                     <DialogTitle>Termos e Condições</DialogTitle>
                 </DialogHeader>
-                <div className="py-4 space-y-4">
-                    <p className="text-sm text-gray-600 mb-4">Para continuar, você precisa ler e aceitar nossos termos e políticas.</p>
-                    
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="termos" checked={checks.termos} onCheckedChange={(c) => setChecks(p => ({...p, termos: c}))} />
-                        <label htmlFor="termos" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            Aceito os <Link to="/termos-de-uso" target="_blank" className="text-[#00D166] underline">Termos de Uso</Link>
-                        </label>
-                    </div>
 
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="privacidade" checked={checks.privacidade} onCheckedChange={(c) => setChecks(p => ({...p, privacidade: c}))} />
-                        <label htmlFor="privacidade" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            Aceito a <Link to="/politica-privacidade" target="_blank" className="text-[#00D166] underline">Política de Privacidade</Link>
-                        </label>
-                    </div>
+                <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors my-2 ${aceito ? 'border-[#00D166] bg-green-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}>
+                    <input
+                        type="checkbox"
+                        checked={aceito}
+                        onChange={() => setAceito(p => !p)}
+                        className="w-4 h-4 mt-0.5 accent-[#00D166] cursor-pointer shrink-0"
+                    />
+                    <span className="text-sm text-gray-700 leading-relaxed">
+                        Li e concordo com os{' '}
+                        <Link to="/termos-de-uso" target="_blank" onClick={(e) => e.stopPropagation()} className="text-[#00D166] underline font-medium hover:text-[#00b356]">Termos de Uso</Link>
+                        {', '}
+                        <Link to="/politica-privacidade" target="_blank" onClick={(e) => e.stopPropagation()} className="text-[#00D166] underline font-medium hover:text-[#00b356]">Política de Privacidade</Link>
+                        {' e '}
+                        <Link to="/norma-lgpd" target="_blank" onClick={(e) => e.stopPropagation()} className="text-[#00D166] underline font-medium hover:text-[#00b356]">Norma LGPD</Link>
+                        .
+                    </span>
+                </label>
 
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="lgpd" checked={checks.lgpd} onCheckedChange={(c) => setChecks(p => ({...p, lgpd: c}))} />
-                        <label htmlFor="lgpd" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            Aceito a <Link to="/norma-lgpd" target="_blank" className="text-[#00D166] underline">Norma LGPD</Link>
-                        </label>
-                    </div>
-                </div>
                 <DialogFooter className="sm:justify-between gap-2">
-                    <button onClick={onCancel} className="px-4 py-2 text-gray-500 text-sm hover:bg-gray-100 rounded">Cancelar</button>
-                    <button 
-                        onClick={onAccept} 
-                        disabled={!allChecked}
-                        className="px-6 py-2 bg-[#0E3A2F] text-white rounded font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                    <button onClick={onCancel} className="px-4 py-2 text-gray-500 text-sm hover:bg-gray-100 rounded transition-colors">
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={onAccept}
+                        disabled={!aceito}
+                        className="px-6 py-2 bg-[#0E3A2F] text-white rounded font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#165945] transition-colors"
                     >
                         Aceitar e Continuar
                     </button>

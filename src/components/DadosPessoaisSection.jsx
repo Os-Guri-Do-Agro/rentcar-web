@@ -68,6 +68,7 @@ const DadosPessoaisSection = ({ formData, setFormData, errors, setErrors, touche
     cpf: v => v.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4').replace(/(\d{3})(\d{3})(\d{0,3})/, '$1.$2.$3').replace(/(\d{3})(\d{0,3})/, '$1.$2'),
     endereco_cep: v => v.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d{0,3})/, '$1-$2'),
     cnh: v => v.replace(/\D/g, '').slice(0, 11),
+    endereco_estado: v => v.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase(),
   };
 
   const handleChange = (e) => {

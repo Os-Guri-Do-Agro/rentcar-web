@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Search, User, Mail, Phone, Calendar, Filter, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Search, User, Mail, Phone, Calendar, Filter, Eye, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 import { formatarData } from '@/lib/dateUtils';
 import userService from '@/services/user/userService';
+
+const ROLE_CONFIG = {
+    user:  { label: 'Cliente',   color: 'bg-blue-100 text-blue-700' },
+    admin: { label: 'Admin',     color: 'bg-red-100 text-red-700' },
+    blog:  { label: 'Blog',      color: 'bg-purple-100 text-purple-700' },
+};
 
 const ITEMS_PER_PAGE = 20;
 
@@ -16,6 +22,21 @@ const AdminClientes = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
+    const [updatingRole, setUpdatingRole] = useState(null);
+
+    const handleRoleChange = async (e, clienteId) => {
+        e.stopPropagation();
+        const newRole = e.target.value;
+        setUpdatingRole(clienteId);
+        try {
+            await userService.patchUserRole(clienteId, newRole);
+            setClientes(prev => prev.map(c => c.id === clienteId ? { ...c, role: newRole } : c));
+        } catch (err) {
+            console.error('[AdminClientes] Erro ao trocar role:', err);
+        } finally {
+            setUpdatingRole(null);
+        }
+    };
 
     const fetchClientes = async (page = currentPage, searchTerm = search, showAll = todos) => {
         setLoading(true);
@@ -133,12 +154,28 @@ const AdminClientes = () => {
                                         </div>
                                     )}
                                 </div>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); navigate(`/admin/cliente/${cliente.id}`); }}
-                                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-[#00D166] text-[#0E3A2F] text-sm font-bold hover:bg-[#00D166] hover:text-white transition-colors"
-                                >
-                                    <Eye size={15} /> Ver Detalhes
-                                </button>
+                                <div className="flex gap-2 mt-2">
+                                    <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 flex-1 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">
+                                        <ShieldCheck size={14} className="text-gray-400 shrink-0" />
+                                        <select
+                                            value={cliente.role || 'user'}
+                                            onChange={(e) => handleRoleChange(e, cliente.id)}
+                                            disabled={updatingRole === cliente.id}
+                                            className="bg-transparent outline-none text-xs font-bold w-full cursor-pointer disabled:opacity-50"
+                                        >
+                                            <option value="user">Cliente</option>
+                                            <option value="admin">Admin</option>
+                                            <option value="blog">Blog</option>
+                                        </select>
+                                        {updatingRole === cliente.id && <Loader2 size={12} className="animate-spin text-gray-400 shrink-0" />}
+                                    </div>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); navigate(`/admin/cliente/${cliente.id}`); }}
+                                        className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-[#00D166] text-[#0E3A2F] text-sm font-bold hover:bg-[#00D166] hover:text-white transition-colors"
+                                    >
+                                        <Eye size={15} />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>

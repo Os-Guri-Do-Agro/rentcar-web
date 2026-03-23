@@ -1,52 +1,41 @@
-import { supabase } from '@/lib/supabaseClient';
+import api from './api';
+
+const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 export const getConfiguracoes = async () => {
-    console.log("[configuracoesService] Fetching all configs");
-    const { data, error } = await supabase
-        .from('configuracoes')
-        .select('*')
-        .order('chave');
-    
-    if (error) {
-        console.error("Error fetching configs:", error);
-        throw error;
-    }
-    return data;
+  const { data } = await api.get('/configuracoes', { headers: authHeader() });
+  return data?.data ?? data ?? [];
 };
 
 export const getConfiguracao = async (chave) => {
-    console.log(`[configuracoesService] Fetching config: ${chave}`);
-    const { data, error } = await supabase
-        .from('configuracoes')
-        .select('*')
-        .eq('chave', chave)
-        .single();
-    
-    if (error) {
-        console.error(`Error fetching config ${chave}:`, error);
-        return null;
-    }
-    return data;
+  try {
+    const { data } = await api.get(`/config/${chave}`);
+    const valor = data?.data?.valor ?? data?.valor;
+    return valor != null ? { chave, valor } : null;
+  } catch {
+    return null;
+  }
 };
 
 export const getConfiguracaoOuPadrao = async (chave, valorPadrao) => {
-    const config = await getConfiguracao(chave);
-    return config ? config.valor : valorPadrao;
+  const config = await getConfiguracao(chave);
+  return config ? config.valor : valorPadrao;
 };
 
 export const updateConfiguracao = async (chave, valor) => {
-    console.log(`[configuracoesService] Updating ${chave} to ${valor}`);
-    
-    const { data, error } = await supabase
-        .from('configuracoes')
-        .update({ valor, atualizado_em: new Date() })
-        .eq('chave', chave)
-        .select()
-        .single();
+  const { data } = await api.patch(
+    `/configuracoes/${chave}`,
+    { valor },
+    { headers: authHeader() }
+  );
+  return data?.data ?? data;
+};
 
-    if (error) {
-        console.error(`Error updating config ${chave}:`, error);
-        throw error;
-    }
-    return data;
+export const createConfiguracao = async ({ chave, valor, descricao, tipo }) => {
+  const { data } = await api.post(
+    '/configuracoes',
+    { chave, valor, descricao, tipo },
+    { headers: authHeader() }
+  );
+  return data?.data ?? data;
 };

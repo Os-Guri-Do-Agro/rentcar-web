@@ -60,6 +60,13 @@ class userService {
     )
   }
 
+  patchUserRole(id: string, role: any): Promise<any> {
+    return this.handleRequest(
+      api.patch(`/users/${id}/role`, { role }, { headers: this.authHeader() }),
+      'Erro ao atualizar papel do usuário'
+    )
+  }
+
 }
 
 export default new userService()

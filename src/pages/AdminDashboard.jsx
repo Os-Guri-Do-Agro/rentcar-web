@@ -122,7 +122,7 @@ const AdminDashboard = () => {
       {/* Row 1 — Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard title="Clientes" value={stats?.clientes?.total || 0} icon={Users} color="#3B82F6" link="/admin/usuarios" sub={`+${stats?.clientes?.novosMes || 0} este mês`} />
-        <StatCard title="Veículos na Frota" value={stats?.carros?.total || 0} icon={Car} color="#00D166" link="/admin/carros" sub={`${stats?.carros?.disponiveis || 0} disponíveis`} />
+        <StatCard title="Veículos na Frota" value={stats?.carros?.total || 0} icon={Car} color="#00D166" link="/admin/frota" sub={`${stats?.carros?.disponiveis || 0} disponíveis`} />
         <StatCard title="Reservas" value={stats?.reservas?.total || 0} icon={Calendar} color="#F59E0B" link="/admin/reservas" sub={`${stats?.reservas?.pendentes || 0} pendentes · ${stats?.reservas?.recentes || 0} recentes`} />
         <StatCard title="Posts do Blog" value={stats?.blog?.posts || 0} icon={FileText} color="#8B5CF6" link="/admin/blog" sub={`${stats?.blog?.postsAtivos || 0} ativos`} />
       </div>

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Save, Plus, Trash2, Edit2, Book, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import termosService from '@/services/termos/termos-services';
 
 const AdminTermsAndRules = () => {
   const { toast } = useToast();
@@ -21,12 +22,12 @@ const AdminTermsAndRules = () => {
       setLoading(true);
       const [regrasRes, termosRes] = await Promise.all([
         supabase.from('regras_gerais').select('*').order('created_at'),
-        supabase.from('termos_condicoes').select('*').order('secao')
+        termosService.getTermos(),
       ]);
-      
+
       setData({
         regras: regrasRes.data || [],
-        termos: termosRes.data || []
+        termos: (termosRes?.data ?? termosRes) || [],
       });
     } catch (error) {
       toast({ title: "Erro ao carregar dados", variant: "destructive" });
@@ -38,21 +39,24 @@ const AdminTermsAndRules = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const table = editingItem.type === 'regras' ? 'regras_gerais' : 'termos_condicoes';
-    
+
     try {
       const { id, ...payload } = editingItem.item;
-      let result;
 
-      if (id) {
-        // Update
-        result = await supabase.from(table).update(payload).eq('id', id).select();
+      if (editingItem.type === 'regras') {
+        // Regras still use Supabase
+        const result = id
+          ? await supabase.from('regras_gerais').update(payload).eq('id', id).select()
+          : await supabase.from('regras_gerais').insert([payload]).select();
+        if (result.error) throw result.error;
       } else {
-        // Insert
-        result = await supabase.from(table).insert([payload]).select();
+        // Termos use REST API
+        if (id) {
+          await termosService.patchTermo(id, payload);
+        } else {
+          await termosService.postTermo(payload);
+        }
       }
-
-      if (result.error) throw result.error;
 
       toast({ title: "Salvo com sucesso!" });
       setEditingItem(null);
@@ -67,10 +71,13 @@ const AdminTermsAndRules = () => {
 
   const handleDelete = async (id, type) => {
     if (!window.confirm("Tem certeza que deseja excluir?")) return;
-    const table = type === 'regras' ? 'regras_gerais' : 'termos_condicoes';
-    
+
     try {
-      await supabase.from(table).delete().eq('id', id);
+      if (type === 'regras') {
+        await supabase.from('regras_gerais').delete().eq('id', id);
+      } else {
+        await termosService.deleteTermo(id);
+      }
       toast({ title: "Item excluído" });
       fetchData();
     } catch (error) {

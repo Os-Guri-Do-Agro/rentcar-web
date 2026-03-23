@@ -31,14 +31,12 @@ const AdminLayout = () => {
     { to: "/admin/secoes", icon: Layers, label: "Seções Home" },
     { to: "/admin/avaliacoes", icon: MessageSquare, label: "Avaliações" },
     { to: "/admin/conteudo", icon: FileText, label: "Conteúdo Legal" },
-    { to: "/admin/emails", icon: Mail, label: "E-mails" },
+    // { to: "/admin/emails", icon: Mail, label: "E-mails" },
     
     // System
     // Removed Configurações link as requested
     { to: "/admin/logs", icon: Shield, label: "Logs de Sistema" },
   ];
-
-  console.log("[AdminLayout] Navigation menu updated - Configurações removed");
 
   return (
     <div className="min-h-screen bg-gray-100 flex">

@@ -50,14 +50,14 @@ class reservasService {
 
   patchCancelReserva(id: string): Promise<any> {
     return this.handleRequest(
-      api.patch(`/reservas/${id}/cancel`, { headers: this.authHeader() }),
+      api.patch(`/reservas/${id}/cancel`, {}, { headers: this.authHeader() }),
       'Erro ao cancelar reserva'
     )
   }
 
   postConfirmReserva(id: string): Promise<any> {
     return this.handleRequest(
-      api.post(`/reservas/${id}/confirm`, { headers: this.authHeader() }),
+      api.post(`/reservas/${id}/confirm`, {}, { headers: this.authHeader() }),
       'Erro ao confirmar reserva'
     )
   }
@@ -80,6 +80,25 @@ class reservasService {
     return this.handleRequest(
       api.post('/reservas', data, { headers: this.authHeader() }),
       'Erro ao criar reserva'
+    )
+  }
+
+  postReservaComArquivos(data: FormData): Promise<any> {
+    return this.handleRequest(
+      api.post('/reservas/com-arquivos', data, {
+        headers: {
+          ...this.authHeader(),
+          'Content-Type': 'multipart/form-data',
+        },
+      }),
+      'Erro ao criar reserva com arquivos'
+    )
+  }
+
+  getDowloadDocumento(reservaId: string, documentId: string): Promise<any> {
+    return this.handleRequest(
+      api.get(`/reservas/${reservaId}/documents/${documentId}/download`, { headers: this.authHeader(), responseType: 'blob' }),
+      'Erro ao fazer download do documento'
     )
   }
 

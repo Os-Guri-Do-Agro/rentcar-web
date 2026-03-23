@@ -49,23 +49,23 @@ export const generateWhatsAppMessage = (car, reservation, user, rentalType = "N�
     : 'Sob consulta';
 
   const message = `
-*Olá! Gostaria de confirmar minha reserva na JL Rent a Car.* 🚗
+*Olá! Gostaria de confirmar minha reserva na JL Rent a Car.* 
 
 *Detalhes do Veículo:*
-🚘 *Modelo:* ${car.nome}
-🏷️ *Categoria:* ${car.categoria}
-🚦 *Placa:* ${car.placa || 'A definir'}
+ *Modelo:* ${car.nome}
+ *Categoria:* ${car.categoria}
+ *Placa:* ${car.placa || 'A definir'}
 
 *Detalhes da Reserva:*
-📅 *Período:* ${startDate} até ${endDate}
-💰 *Valor Total:* ${totalValue}
-📋 *Tipo de Uso:* ${rentalType}
-🆔 *Protocolo:* #${reservation?.id?.slice(0, 8) || 'N/A'}
+ *Período:* ${startDate} até ${endDate}
+ *Valor Total:* ${totalValue}
+ *Tipo de Uso:* ${rentalType}
+ *Protocolo:* #${reservation?.id?.slice(0, 8) || 'N/A'}
 
 *Meus Dados:*
-👤 *Nome:* ${user.nome}
-📧 *Email:* ${user.email}
-📱 *Telefone:* ${user.phone || 'Não informado'}
+ *Nome:* ${user.nome}
+ *Email:* ${user.email}
+ *Telefone:* ${user.telefone || 'Não informado'}
 
 _Aguardo instruções para envio da documentação._
   `.trim();

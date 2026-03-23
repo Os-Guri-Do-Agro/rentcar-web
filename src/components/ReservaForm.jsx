@@ -127,10 +127,10 @@ const ReservaForm = ({ car }) => {
             return { preco: base, precoTotal: base * (duracaoDias || 1), precoSemanal: 0, precoMensal: 0 };
         }
 
+        const DIAS = { trimestral: 90, semestral: 180, anual: 365 };
+        const dias = DIAS[categoria];
         const semanal = categoria === 'semanal'    ? base
-                      : categoria === 'trimestral' ? base / 13
-                      : categoria === 'semestral'  ? base / 26
-                      : categoria === 'anual'      ? base / 52 : 0;
+                      : dias                       ? (base * 7) / dias : 0;
         const mensal  = categoria === 'trimestral' ? base / 3
                       : categoria === 'semestral'  ? base / 6
                       : categoria === 'anual'      ? base / 12 : 0;

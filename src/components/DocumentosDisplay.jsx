@@ -1,7 +1,8 @@
-import React from 'react';
-import { FileText, Download, Eye, AlertCircle, Home, Wallet, CreditCard, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileText, Download, Eye, AlertCircle, Home, Wallet, CreditCard, AlertTriangle, Loader2 } from 'lucide-react';
 import { formatarTamanhoArquivo } from '@/lib/validationUtils';
 import { cn } from '@/lib/utils';
+import reservasServices from '@/services/reservas/reservas-services';
 
 const getDocumentConfig = (type) => {
     switch (type) {
@@ -20,7 +21,27 @@ const getDocumentConfig = (type) => {
     }
 };
 
-const DocumentosDisplay = ({ documentos = [], className }) => {
+const DocumentosDisplay = ({ documentos = [], reservaId, className }) => {
+    const [downloading, setDownloading] = useState(null);
+
+    const handleDownload = async (doc) => {
+        if (!reservaId || !doc.id) return;
+        setDownloading(doc.id);
+        try {
+            const blob = await reservasServices.getDowloadDocumento(reservaId, doc.id);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = doc.nome;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Erro ao baixar documento:', err);
+        } finally {
+            setDownloading(null);
+        }
+    };
+
     if (!documentos || documentos.length === 0) {
         return (
             <div className="p-6 bg-gray-50 border border-gray-100 rounded-xl text-center text-gray-500 flex flex-col items-center">
@@ -31,47 +52,45 @@ const DocumentosDisplay = ({ documentos = [], className }) => {
     }
 
     return (
-        <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4", className)}>
+        <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-3", className)}>
             {documentos.map((doc, index) => {
                 const config = getDocumentConfig(doc.tipo);
                 const Icon = config.icon;
-                
+
                 return (
-                    <div key={index} className={cn("rounded-xl border p-4 flex flex-col shadow-sm transition-all hover:shadow-md", config.bg, config.border)}>
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                                <div className={cn("p-2 rounded-lg bg-white shadow-sm", config.text)}>
-                                    <Icon size={20} />
-                                </div>
-                                <div>
-                                    <h4 className={cn("font-bold text-sm", config.text)}>{config.label}</h4>
-                                    <span className="text-xs text-gray-500 opacity-80">{new Date(doc.data_upload).toLocaleDateString()}</span>
-                                </div>
+                    <div key={index} className={cn("rounded-xl border p-3 flex flex-col gap-3 shadow-sm transition-all hover:shadow-md min-w-0", config.bg, config.border)}>
+                        <div className="flex items-center gap-2 min-w-0">
+                            <div className={cn("p-2 rounded-lg bg-white shadow-sm shrink-0", config.text)}>
+                                <Icon size={18} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h4 className={cn("font-bold text-sm truncate", config.text)}>{config.label}</h4>
+                                <span className="text-xs text-gray-500">{new Date(doc.data_upload).toLocaleDateString()}</span>
                             </div>
                         </div>
-                        
-                        <div className="mb-4 flex-grow">
-                            <p className="text-xs font-medium text-gray-700 truncate" title={doc.nome}>{doc.nome}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{formatarTamanhoArquivo(doc.tamanho)}</p>
+
+                        <div className="bg-white/60 rounded-lg px-2.5 py-2 min-w-0">
+                            <p className="text-xs font-medium text-gray-700 truncate leading-snug" title={doc.nome}>{doc.nome}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{formatarTamanhoArquivo(doc.tamanho)}</p>
                         </div>
 
                         <div className="flex gap-2 mt-auto">
-                             <a 
-                                href={doc.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                             <a
+                                href={doc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors truncate"
                              >
-                                <Eye size={14} /> Visualizar
+                                <Eye size={13} className="shrink-0" /> <span className="truncate">Visualizar</span>
                              </a>
-                             <a 
-                                href={doc.url} 
-                                download={doc.nome}
-                                className={cn("flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-colors opacity-90 hover:opacity-100", `bg-${config.color}-600`)}
-                                style={{ backgroundColor: config.color === 'purple' ? '#9333ea' : config.color === 'orange' ? '#ea580c' : undefined }} // Tailwind dynamic class fix
+                             <button
+                                onClick={() => handleDownload(doc)}
+                                disabled={downloading === doc.id}
+                                className={cn("flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold text-white transition-colors opacity-90 hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed", `bg-${config.color}-600`)}
+                                style={{ backgroundColor: config.color === 'purple' ? '#9333ea' : config.color === 'orange' ? '#ea580c' : undefined }}
                              >
-                                <Download size={14} /> Baixar
-                             </a>
+                                {downloading === doc.id ? <Loader2 size={13} className="animate-spin shrink-0" /> : <Download size={13} className="shrink-0" />} <span className="truncate">Baixar</span>
+                             </button>
                         </div>
                     </div>
                 );

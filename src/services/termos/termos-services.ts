@@ -22,8 +22,29 @@ class termosService {
 
   getTermos(): Promise<any> {
     return this.handleRequest(
-      api.get('/termos', { headers: this.authHeader() }),
+      api.get('/termos'),
       'Erro ao buscar termos'
+    )
+  }
+
+  postTermo(data: { titulo: string; conteudo: string; secao: string }): Promise<any> {
+    return this.handleRequest(
+      api.post('/termos', data, { headers: this.authHeader() }),
+      'Erro ao criar termo'
+    )
+  }
+
+  patchTermo(id: string, data: Partial<{ titulo: string; conteudo: string; secao: string }>): Promise<any> {
+    return this.handleRequest(
+      api.patch(`/termos/${id}`, data, { headers: this.authHeader() }),
+      'Erro ao atualizar termo'
+    )
+  }
+
+  deleteTermo(id: string): Promise<any> {
+    return this.handleRequest(
+      api.delete(`/termos/${id}`, { headers: this.authHeader() }),
+      'Erro ao excluir termo'
     )
   }
 

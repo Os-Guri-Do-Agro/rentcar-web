@@ -72,6 +72,7 @@ import AdminConteudo from '@/pages/admin/AdminConteudo';
 import AdminEmails from '@/pages/admin/AdminEmails'; 
 import DiagnosticoPage from '@/pages/DiagnosticoPage';
 import AdminCarPricing from '@/pages/admin/AdminCarPricing'; 
+import AdminWhatsAppConfig from './pages/admin/AdminWhatsAppConfig';
 
 function App() {
   const { usuario, isAdmin } = useAuth();
@@ -140,6 +141,7 @@ function App() {
                   <Route path="frota" element={<AdminFleetManager />} />
                   <Route path="precos-carros" element={<AdminCarPricing />} /> 
                   <Route path="carros-destaque" element={<AdminCarrosDestaque />} />
+                  <Route path="whatsapp-config" element={<AdminWhatsAppConfig />} />
                   
                   <Route path="reservas" element={<AdminReservations />} />
                   <Route path="reserva/:reservaId" element={<AdminDetalhesReserva />} />

@@ -33,9 +33,14 @@ const DetalhesReserva = () => {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" size={40}/></div>;
   if (!reserva) return <div className="p-10 text-center">Reserva não encontrada.</div>;
 
-  // Document Handling
-  const docRow = reserva.reserva_documentos && reserva.reserva_documentos.length > 0 ? reserva.reserva_documentos[0] : null;
-  const docs = docRow?.documentos || [];
+  const docs = (reserva.reserva_documentos || []).map(doc => ({
+    id: doc.id,
+    tipo: doc.tipo_documento,
+    nome: doc.arquivo_nome,
+    tamanho: doc.arquivo_tamanho,
+    url: doc.url_documento,
+    data_upload: doc.created_at,
+  }));
 
   return (
     <>
@@ -75,7 +80,7 @@ const DetalhesReserva = () => {
                    <FileText size={18} /> Documentação
                </h3>
                
-               <DocumentosDisplay documentos={docs} />
+               <DocumentosDisplay documentos={docs} reservaId={reserva.id} />
 
                <div className="mt-8 pt-6 border-t flex justify-between items-center">
                    <span className="text-gray-500 font-bold">Valor Total</span>

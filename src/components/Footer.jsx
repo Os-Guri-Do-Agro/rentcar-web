@@ -29,7 +29,7 @@ const Footer = () => {
     endereco: '',
     instagram: '',
     facebook: '',
-    maps_url: ''
+    // maps_url: ''
   });
 
   useEffect(() => {
@@ -52,7 +52,7 @@ const Footer = () => {
             endereco: endereco || '',
             instagram: instagram || '',
             facebook: facebook || '',
-            maps_url: maps_url || ''
+            // maps_url: maps_url || ''
         });
     };
     loadConfigs();
