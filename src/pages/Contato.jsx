@@ -9,8 +9,9 @@ import {
   getEnderecoEmpresa,
   getInstagram,
   getFacebook,
-  getMapsUrl,
 } from '@/services/configService';
+
+const MAPS_URL = 'https://www.google.com/maps/place/R.+Fernando+Falc%C3%A3o,+54+-+Vila+Claudia,+S%C3%A3o+Paulo+-+SP,+03180-000/@-23.5543629,-46.5866693,1047m/data=!3m2!1e3!4b1!4m6!3m5!1s0x94ce5eb753b95707:0xe35150227a076d1b!8m2!3d-23.5543629!4d-46.5840944!16s%2Fg%2F11nnkr2gg3?entry=ttu&g_ep=EgoyMDI2MDMxOC4xIKXMDSoASAFQAw%3D%3D'
 import {
     abrirInstagram,
     abrirFacebook,
@@ -28,20 +29,17 @@ const Contato = () => {
         endereco: '',
         instagram: '',
         facebook: '',
-        maps_url: '',
     });
 
     useEffect(() => {
         const loadConfigs = async () => {
-            console.log("[Contato] Loading configurations...");
-            const [whatsapp, email, telefone, endereco, instagram, facebook, maps_url] = await Promise.all([
+            const [whatsapp, email, telefone, endereco, instagram, facebook] = await Promise.all([
                 getWhatsAppNumber(),
                 getEmailSuporte(),
                 getTelefoneSuporte(),
                 getEnderecoEmpresa(),
                 getInstagram(),
                 getFacebook(),
-                getMapsUrl(),
             ]);
 
             setConfig({
@@ -51,7 +49,6 @@ const Contato = () => {
                 endereco: endereco || '',
                 instagram: instagram || '',
                 facebook: facebook || '',
-                maps_url: maps_url || '',
             });
         };
         loadConfigs();
@@ -97,7 +94,7 @@ const Contato = () => {
                         <div>
                             <h2 className="text-3xl font-bold mb-6">Visite nossa Sede</h2>
                             <div className="space-y-4 text-gray-300">
-                                <div className="flex items-start gap-4 cursor-pointer" onClick={() => abrirMaps(config.maps_url)}>
+                                <div className="flex items-start gap-4 cursor-pointer" onClick={() => abrirMaps(MAPS_URL)}>
                                     <MapPin className="text-[#00D166] mt-1 shrink-0" />
                                     <p>{config.endereco}</p>
                                 </div>
@@ -111,7 +108,7 @@ const Contato = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="h-64 rounded-xl shadow-lg border-4 border-white/10 cursor-pointer overflow-hidden" onClick={() => abrirMaps(config.maps_url)}>
+                        <div className="h-64 rounded-xl shadow-lg border-4 border-white/10 cursor-pointer overflow-hidden" onClick={() => abrirMaps(MAPS_URL)}>
                              <iframe
                                 src={mapImage}
                                 width="100%"

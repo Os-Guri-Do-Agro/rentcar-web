@@ -9,8 +9,9 @@ import {
   getEnderecoEmpresa,
   getInstagram,
   getFacebook,
-  getMapsUrl,
 } from '@/services/configService';
+
+const MAPS_URL = 'https://www.google.com/maps/place/R.+Fernando+Falc%C3%A3o,+54+-+Vila+Claudia,+S%C3%A3o+Paulo+-+SP,+03180-000/@-23.5543629,-46.5866693,1047m/data=!3m2!1e3!4b1!4m6!3m5!1s0x94ce5eb753b95707:0xe35150227a076d1b!8m2!3d-23.5543629!4d-46.5840944!16s%2Fg%2F11nnkr2gg3?entry=ttu&g_ep=EgoyMDI2MDMxOC4xIKXMDSoASAFQAw%3D%3D'
 import {
     abrirInstagram,
     abrirFacebook,
@@ -29,20 +30,17 @@ const Footer = () => {
     endereco: '',
     instagram: '',
     facebook: '',
-    maps_url: '',
   });
 
   useEffect(() => {
     const loadConfigs = async () => {
-        console.log("[Footer] Loading configurations...");
-        const [whatsapp, email, telefone, endereco, instagram, facebook, maps_url] = await Promise.all([
+        const [whatsapp, email, telefone, endereco, instagram, facebook] = await Promise.all([
             getWhatsAppNumber(),
             getEmailSuporte(),
             getTelefoneSuporte(),
             getEnderecoEmpresa(),
             getInstagram(),
             getFacebook(),
-            getMapsUrl(),
         ]);
 
         setConfig({
@@ -52,7 +50,6 @@ const Footer = () => {
             endereco: endereco || '',
             instagram: instagram || '',
             facebook: facebook || '',
-            maps_url: maps_url || '',
         });
     };
     loadConfigs();
@@ -117,7 +114,7 @@ const Footer = () => {
                     </div>
                     <span className="group-hover:text-white transition-colors">WhatsApp</span>
               </li>
-              <li className="flex items-start gap-3 group cursor-pointer" onClick={() => abrirMaps(config.maps_url)}>
+              <li className="flex items-start gap-3 group cursor-pointer" onClick={() => abrirMaps(MAPS_URL)}>
                  <div className="w-8 h-8 rounded-full bg-[#00D166]/10 flex items-center justify-center text-[#00D166] group-hover:bg-[#00D166] group-hover:text-[#0E3A2F] transition-all mt-1">
                     <MapPin size={16} />
                  </div>
@@ -129,7 +126,7 @@ const Footer = () => {
           {/* Map Column */}
           <div>
             <h3 className="text-lg font-bold mb-6 text-white">Onde Estamos</h3>
-            <div className="rounded-xl overflow-hidden h-40 border border-gray-700 shadow-lg group cursor-pointer relative" onClick={() => abrirMaps(config.maps_url)}>
+            <div className="rounded-xl overflow-hidden h-40 border border-gray-700 shadow-lg group cursor-pointer relative" onClick={() => abrirMaps(MAPS_URL)}>
               <img
                 src={mapImage}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
@@ -139,7 +136,7 @@ const Footer = () => {
                 <MapPin size={32} className="text-white" />
               </div>
             </div>
-            <p className="text-xs text-center mt-2 text-gray-500 hover:text-[#00D166] cursor-pointer" onClick={() => abrirMaps(config.maps_url)}>Clique para abrir no mapa</p>
+            <p className="text-xs text-center mt-2 text-gray-500 hover:text-[#00D166] cursor-pointer" onClick={() => abrirMaps(MAPS_URL)}>Clique para abrir no mapa</p>
           </div>
         </div>
 

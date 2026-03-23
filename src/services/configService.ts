@@ -11,7 +11,6 @@ const DEFAULTS = {
   horario: 'Segunda a Sexta: 08h às 18h',
   instagram: 'https://www.instagram.com/jlrentacarsp/',
   facebook: 'https://www.facebook.com/profile.php?id=61584407205265',
-  maps_url: 'https://maps.google.com/?q=Rua+Fernando+Falcão+54',
 }
 
 // --- Public config read — GET /config/:chave ---
@@ -60,7 +59,6 @@ export const getEnderecoEmpresa      = () => getConfig('endereco',            DE
 export const getHorarioFuncionamento = () => getConfig('horario_atendimento', DEFAULTS.horario)
 export const getInstagram            = () => getConfig('instagram',           DEFAULTS.instagram)
 export const getFacebook             = () => getConfig('facebook',            DEFAULTS.facebook)
-export const getMapsUrl              = () => getConfig('maps_url',            DEFAULTS.maps_url)
 
 // --- Car / Plan pricing (Supabase) ---
 export const getCarPricing = async () => {
