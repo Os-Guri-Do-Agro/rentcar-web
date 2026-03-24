@@ -79,13 +79,15 @@ const Register = () => {
             return;
         }
 
+        const strip = (v) => (v ?? '').replace(/\D/g, '');
         const data = {
             email: formData.email,
             senha: formData.password,
             nome: formData.nome,
-            cpf: formData.cpf,
-            telefone: formData.phone
-                }
+            cpf: strip(formData.cpf),
+            telefone: strip(formData.phone),
+            aceitouTermos: true
+        }
       await authService.postRegister(data);
       
       toast({

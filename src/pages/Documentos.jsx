@@ -215,14 +215,15 @@ const Documentos = () => {
 
 
         // User data as JSON string
+        const strip = (v) => (v ?? '').replace(/\D/g, '');
         const usuarioPayload = {
             nome:                 formData.nome,
             email:                formData.email,
-            telefone:             formData.telefone,
+            telefone:             strip(formData.telefone),
             data_nascimento:      formData.data_nascimento,
-            cpf:                  formData.cpf,
-            cnpj:                 formData.cnpj ?? '',
-            endereco_cep:         formData.endereco_cep,
+            cpf:                  strip(formData.cpf),
+            cnpj:                 strip(formData.cnpj),
+            endereco_cep:         strip(formData.endereco_cep),
             endereco_rua:         formData.endereco_rua,
             endereco_numero:      formData.endereco_numero,
             endereco_complemento: formData.endereco_complemento ?? '',

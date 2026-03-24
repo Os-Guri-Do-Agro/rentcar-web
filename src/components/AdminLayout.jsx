@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, Car, Users, Calendar, 
-  LogOut, Menu, X, FileText, 
-  DollarSign, Shield, Mail, Layers, MessageSquare, Newspaper
+import {
+  LayoutDashboard, Car, Users, Calendar,
+  LogOut, Menu, X, FileText,
+  DollarSign, Shield, Mail, Layers, MessageSquare, Newspaper, MessageCircle
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminMode } from '@/context/AdminModeContext';
@@ -36,6 +36,7 @@ const AdminLayout = () => {
     
     // System
     // Removed Configurações link as requested
+    { to: "/admin/whatsapp", icon: MessageCircle, label: "WhatsApp" },
     { to: "/admin/logs", icon: Shield, label: "Logs de Sistema" },
   ];
 

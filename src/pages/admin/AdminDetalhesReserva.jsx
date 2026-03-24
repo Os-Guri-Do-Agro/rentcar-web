@@ -7,6 +7,7 @@ import { formatarData } from '@/lib/dateUtils';
 import { Loader2, ArrowLeft, User, Mail, Phone, FileText, Car, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import DocumentosDisplay from '@/components/DocumentosDisplay';
+import WhatsAppPanel from '@/components/WhatsAppPanel';
 import reservasServices from '@/services/reservas/reservas-services';
 import documentosService from '@/services/reservas/documentos/documentos-service';
 
@@ -125,7 +126,9 @@ const AdminDetalhesReserva = () => {
                     </div>
                 </div>
 
-                <div className="xl:col-span-1">
+                <div className="xl:col-span-1 space-y-6">
+                    <WhatsAppPanel telefone={reserva.users?.telefone} reserva={reserva} />
+
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24">
                         <h2 className="text-lg font-bold text-[#0E3A2F] mb-6 flex items-center gap-2"><Clock size={20} className="text-[#00D166]" /> Histórico</h2>
                         <div className="space-y-6 border-l border-gray-200 pl-6">

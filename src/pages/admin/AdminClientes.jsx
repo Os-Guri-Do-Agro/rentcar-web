@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Search, User, Mail, Phone, Calendar, Filter, Eye, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+import { Loader2, Search, User, Mail, Phone, Calendar, Filter, Eye, ChevronLeft, ChevronRight, ShieldCheck, MessageCircle } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 import { formatarData } from '@/lib/dateUtils';
 import userService from '@/services/user/userService';
@@ -169,6 +169,18 @@ const AdminClientes = () => {
                                         </select>
                                         {updatingRole === cliente.id && <Loader2 size={12} className="animate-spin text-gray-400 shrink-0" />}
                                     </div>
+                                    {cliente.telefone && (
+                                        <a
+                                            href={`https://wa.me/${(cliente.telefone).replace(/\D/g, '')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="flex items-center justify-center px-3 py-1.5 rounded-lg border border-green-500 text-green-600 text-sm font-bold hover:bg-green-500 hover:text-white transition-colors"
+                                            title="Abrir WhatsApp"
+                                        >
+                                            <MessageCircle size={15} />
+                                        </a>
+                                    )}
                                     <button
                                         onClick={(e) => { e.stopPropagation(); navigate(`/admin/cliente/${cliente.id}`); }}
                                         className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-[#00D166] text-[#0E3A2F] text-sm font-bold hover:bg-[#00D166] hover:text-white transition-colors"
