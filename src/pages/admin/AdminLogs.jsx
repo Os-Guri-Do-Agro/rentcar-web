@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Loader2, Mail, MessageSquare, CheckCircle, XCircle, RefreshCw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Mail, MessageSquare, CheckCircle, XCircle, RefreshCw, Search, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import whatsappService from '@/services/whatsapp/whatsapp-service';
 
@@ -134,8 +134,10 @@ const AdminLogs = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-sm">
                             {logs.map(log => {
+                                const isWhatsapp = activeTab === 'whatsapp';
                                 const isSuccess = log.status === 'enviado' || log.status === 'success' || log.status === 'sent';
                                 const isError = log.status === 'erro' || log.status === 'error';
+                                const isRecebido = log.status === 'recebido';
                                 let erroDetalhe = log.erro_mensagem;
                                 if (erroDetalhe) {
                                     try {
@@ -146,9 +148,13 @@ const AdminLogs = () => {
                                     } catch (_) { /* keep raw */ }
                                 }
                                 return (
-                                <tr key={log.id} className={`hover:bg-gray-50 transition-colors ${isError ? 'bg-red-50/30' : ''}`}>
+                                <tr key={log.id} className={`hover:bg-gray-50 transition-colors ${!isWhatsapp && isError ? 'bg-red-50/30' : ''}`}>
                                     <td className="p-4">
-                                        {isSuccess ? (
+                                        {isWhatsapp ? (
+                                            isRecebido
+                                                ? <span className="flex items-center gap-1 text-blue-700 font-bold bg-blue-50 px-2.5 py-1 rounded-full w-fit text-xs border border-blue-200 shadow-sm"><ArrowDownLeft size={12}/> Recebido</span>
+                                                : <span className="flex items-center gap-1 text-green-700 font-bold bg-green-100 px-2.5 py-1 rounded-full w-fit text-xs border border-green-200 shadow-sm"><ArrowUpRight size={12}/> Enviado</span>
+                                        ) : isSuccess ? (
                                             <span className="flex items-center gap-1 text-green-700 font-bold bg-green-100 px-2.5 py-1 rounded-full w-fit text-xs border border-green-200 shadow-sm"><CheckCircle size={12}/> Enviado</span>
                                         ) : (
                                             <div className="flex flex-col gap-1">
@@ -172,7 +178,7 @@ const AdminLogs = () => {
                                         </div>
                                     </td>
                                     {activeTab === 'whatsapp' && (
-                                        <td className="p-4 text-gray-500 text-xs">{log.created_by ?? '—'}</td>
+                                        <td className="p-4 text-gray-500 text-xs">{log.created_by ?? 'Cliente'}</td>
                                     )}
                                     <td className="p-4 text-center">
                                         {log.reserva_id ? (

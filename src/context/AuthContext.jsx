@@ -10,13 +10,24 @@ export const useAuth = () => {
   return context;
 };
 
+// JWT usa base64URL (- e _ em vez de + e /), atob espera base64 padrão
 const decodeToken = (token) => {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload;
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+    return JSON.parse(atob(padded));
   } catch {
     return null;
   }
+};
+
+const buildUsuario = (payload) => {
+  if (!payload) return null;
+  const user = payload.user ?? {};
+  // role pode estar em payload.user.role ou direto em payload.role
+  const role = (user.role ?? payload.role ?? '').toLowerCase();
+  return { ...user, role };
 };
 
 export const AuthProvider = ({ children }) => {
@@ -27,7 +38,7 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     if (token) {
       const payload = decodeToken(token);
-      setUsuario(payload?.user ?? null);
+      setUsuario(buildUsuario(payload));
     }
     setLoading(false);
   }, []);
@@ -35,7 +46,7 @@ export const AuthProvider = ({ children }) => {
   const login = (token) => {
     localStorage.setItem('token', token);
     const payload = decodeToken(token);
-    setUsuario(payload?.user ?? null);
+    setUsuario(buildUsuario(payload));
   };
 
   const logout = () => {
@@ -44,10 +55,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
+    <AuthContext.Provider value={{
       isAuthenticated: !!usuario,
       usuario,
-      isAdmin: usuario?.role?.toLowerCase() === 'admin',
+      isAdmin: usuario?.role === 'admin',
+      isBlog: usuario?.role === 'blog',
       loading,
       login,
       logout,

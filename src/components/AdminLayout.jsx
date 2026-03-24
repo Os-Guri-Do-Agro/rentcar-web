@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useAdminMode } from '@/context/AdminModeContext';
 
 const AdminLayout = () => {
-  const { logout, usuario } = useAuth();
+  const { logout, usuario, isBlog } = useAuth();
   const { setIsAdminMode } = useAdminMode();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,25 +20,25 @@ const AdminLayout = () => {
     window.location.reload();
   };
 
-  const navItems = [
+  const allNavItems = [
     { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
     { to: "/admin/frota", icon: Car, label: "Gerenciar Frota" },
     { to: "/admin/precos-carros", icon: DollarSign, label: "Preços dos Carros" },
     { to: "/admin/reservas", icon: Calendar, label: "Reservas" },
     { to: "/admin/clientes", icon: Users, label: "Clientes" },
     { to: "/admin/blog", icon: Newspaper, label: "Blog" },
-    
-    // CMS & Content
     { to: "/admin/secoes", icon: Layers, label: "Seções Home" },
     { to: "/admin/avaliacoes", icon: MessageSquare, label: "Avaliações" },
     { to: "/admin/conteudo", icon: FileText, label: "Conteúdo Legal" },
-    // { to: "/admin/emails", icon: Mail, label: "E-mails" },
-    
-    // System
-    // Removed Configurações link as requested
     { to: "/admin/whatsapp", icon: MessageCircle, label: "WhatsApp" },
     { to: "/admin/logs", icon: Shield, label: "Logs de Sistema" },
   ];
+
+  const blogNavItems = [
+    { to: "/admin/blog", icon: Newspaper, label: "Blog" },
+  ];
+
+  const navItems = isBlog ? blogNavItems : allNavItems;
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -102,7 +102,7 @@ const AdminLayout = () => {
           </button>
 
           <div className="flex items-center gap-4 ml-auto">
-             <span className="text-sm font-medium text-gray-600 hidden sm:inline-block">Administrador</span>
+             <span className="text-sm font-medium text-gray-600 hidden sm:inline-block">{isBlog ? 'Editor de Blog' : 'Administrador'}</span>
              <div className="w-8 h-8 rounded-full bg-[#00D166] flex items-center justify-center text-[#0E3A2F] font-bold overflow-hidden">
                {usuario?.foto_perfil_url ? (
                    <img src={usuario.foto_perfil_url} alt="Admin" className="w-full h-full object-cover"/>

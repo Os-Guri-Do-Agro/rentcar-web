@@ -28,8 +28,17 @@ const fmtTime = (ts) => {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 };
 
-// Normalisa a response do service (handleRequest já deswrappa axios.data,
-// mas a API retorna { success, data: { ... } })
+const fmtDateLabel = (ts) => {
+  if (!ts) return '';
+  const d = new Date(typeof ts === 'number' ? ts * 1000 : ts);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === now.toDateString()) return 'Hoje';
+  if (d.toDateString() === yesterday.toDateString()) return 'Ontem';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+};
+
 const unwrap = (res) => res?.data ?? res;
 
 // ─── Status Badge ────────────────────────────────────────────────────────────
@@ -67,7 +76,6 @@ const VerificarNumeroModal = ({ onClose }) => {
     setResult(null);
     try {
       const res = await whatsappService.postVerificarNumero({ number: clean });
-      // response: { success, data: { existe, jid } }
       setResult(unwrap(res));
     } catch {
       toast({ title: 'Erro', description: 'Não foi possível verificar o número.', variant: 'destructive' });
@@ -128,9 +136,7 @@ const NovaMensagemModal = ({ onClose, onSent, defaultNumber = '' }) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Texto
   const [text, setText] = useState('');
-  // Localização (coordenadas fixas da loja)
   const [locName, setLocName] = useState('JL Rent Car — Matriz');
   const [address, setAddress] = useState('Rua Fernando Falcão, 54 - Mooca, São Paulo - SP');
 
@@ -168,7 +174,6 @@ const NovaMensagemModal = ({ onClose, onSent, defaultNumber = '' }) => {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
         </div>
 
-        {/* Número */}
         <div className="mb-4">
           <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Número (DDI+DDD)</label>
           <input
@@ -180,7 +185,6 @@ const NovaMensagemModal = ({ onClose, onSent, defaultNumber = '' }) => {
           />
         </div>
 
-        {/* Type tabs */}
         <div className="flex gap-1 mb-4 p-1 bg-gray-100 rounded-xl">
           {SEND_TABS.map(({ id, label, Icon }) => (
             <button
@@ -193,7 +197,6 @@ const NovaMensagemModal = ({ onClose, onSent, defaultNumber = '' }) => {
           ))}
         </div>
 
-        {/* Fields */}
         <div className="space-y-3">
           {tab === 'texto' && (
             <textarea
@@ -203,21 +206,6 @@ const NovaMensagemModal = ({ onClose, onSent, defaultNumber = '' }) => {
               rows={4}
               className="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none"
             />
-          )}
-
-          {tab === 'imagem' && (
-            <>
-              <input type="text" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="URL pública da imagem (JPEG, PNG, WEBP)" className="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none" />
-              <input type="text" value={imgCaption} onChange={e => setImgCaption(e.target.value)} placeholder="Legenda (opcional)" className="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none" />
-            </>
-          )}
-
-          {tab === 'documento' && (
-            <>
-              <input type="text" value={docUrl} onChange={e => setDocUrl(e.target.value)} placeholder="URL pública do PDF/documento" className="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none" />
-              <input type="text" value={fileName} onChange={e => setFileName(e.target.value)} placeholder="Nome do arquivo (ex: Contrato.pdf)" className="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none" />
-              <input type="text" value={docCaption} onChange={e => setDocCaption(e.target.value)} placeholder="Mensagem junto ao documento (opcional)" className="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none" />
-            </>
           )}
 
           {tab === 'localizacao' && (
@@ -237,6 +225,31 @@ const NovaMensagemModal = ({ onClose, onSent, defaultNumber = '' }) => {
           {loading ? 'Enviando…' : 'Enviar'}
         </button>
       </div>
+    </div>
+  );
+};
+
+// ─── Date Separator ──────────────────────────────────────────────────────────
+
+const DateSeparator = ({ ts }) => (
+  <div className="flex items-center justify-center my-3">
+    <span className="bg-white/80 text-gray-500 text-[11px] font-medium px-3 py-1 rounded-full shadow-sm border border-gray-100">
+      {fmtDateLabel(ts)}
+    </span>
+  </div>
+);
+
+// ─── Avatar ──────────────────────────────────────────────────────────────────
+
+const Avatar = ({ chat, size = 'md' }) => {
+  const name = chat?.pushName || chat?.name || '#';
+  const cls = size === 'sm' ? 'w-9 h-9 text-xs' : 'w-11 h-11 text-sm';
+  return (
+    <div className={`${cls} rounded-full bg-[#0E3A2F] text-white flex items-center justify-center font-bold shrink-0 overflow-hidden`}>
+      {chat?.profilePicUrl
+        ? <img src={chat.profilePicUrl} alt={name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
+        : name[0]?.toUpperCase() ?? '#'
+      }
     </div>
   );
 };
@@ -264,11 +277,18 @@ const AdminWhatsApp = () => {
 
   const messagesEndRef = useRef(null);
   const selectedChatRef = useRef(null);
+  const textAreaRef = useRef(null);
   const [sseConnected, setSseConnected] = useState(false);
 
-  // Mantém refs atualizados a cada render — usados no handler SSE para evitar stale closure
   useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
 
+  // ── Auto-resize textarea ──
+  useEffect(() => {
+    const el = textAreaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [sendText]);
 
   // ── SSE — tempo real ──
   useEffect(() => {
@@ -286,14 +306,12 @@ const AdminWhatsApp = () => {
 
         if (!tipo || !dados) return;
 
-        // Normaliza o jid para comparação (remove sufixo @...)
-        const jidRecebido = (dados.remoteJid ?? '').replace(/@.*$/, '');
+        const jidRecebido   = (dados.remoteJid ?? '').replace(/@.*$/, '');
         const jidSelecionado = (selectedChatRef.current?.remoteJid ?? '').replace(/@.*$/, '');
-        const isChatAtual = jidSelecionado && jidSelecionado === jidRecebido;
+        const isChatAtual   = jidSelecionado && jidSelecionado === jidRecebido;
 
         if (tipo === 'mensagem_recebida') {
           if (isChatAtual) {
-            // SSE traz tudo — apenas adiciona na lista, sem request
             const newMsg = {
               key: { id: `sse-${Date.now()}`, fromMe: false, remoteJid: dados.remoteJid },
               message: { conversation: dados.texto ?? '' },
@@ -304,7 +322,6 @@ const AdminWhatsApp = () => {
             };
             setMessages(prev => [...prev, newMsg]);
           }
-          // Sobe chat na lista + marca não lido se não estiver aberto
           setChats(prev => {
             const idx = prev.findIndex(c => (c.remoteJid ?? '').replace(/@.*$/, '') === jidRecebido);
             if (idx === -1) return prev;
@@ -342,7 +359,6 @@ const AdminWhatsApp = () => {
     setStatusLoading(true);
     try {
       const res = await whatsappService.getStatus();
-      // API: { success, data: { conectado, estado } }
       setStatus(unwrap(res));
     } catch {
       setStatus(null);
@@ -366,7 +382,6 @@ const AdminWhatsApp = () => {
   };
 
   // ── Messages ──
-  // response: { success, data: { messages: { total, pages, currentPage, records: [...] } } }
   const fetchMessages = async (jid) => {
     setMsgLoading(true);
     setMessages([]);
@@ -396,7 +411,6 @@ const AdminWhatsApp = () => {
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
     fetchMessages(chat.remoteJid);
-    // Limpa badge de não lido
     setChats(prev => prev.map(c => c.remoteJid === chat.remoteJid ? { ...c, _unread: false } : c));
   };
 
@@ -405,7 +419,6 @@ const AdminWhatsApp = () => {
     const number = fmtJid(selectedChat.remoteJid);
     const text = sendText.trim();
 
-    // Otimista: exibe a mensagem imediatamente
     const tempId = `temp-${Date.now()}`;
     setMessages(prev => [...prev, {
       id: tempId,
@@ -417,7 +430,6 @@ const AdminWhatsApp = () => {
     }]);
     setSendText('');
 
-    // Envia em background — SSE cuida da atualização; só marca falha se erro
     whatsappService.postEnviar({ number, text }).then(() => {
       setMessages(prev => prev.map(m =>
         m.id === tempId ? { ...m, _pending: false } : m
@@ -441,7 +453,6 @@ const AdminWhatsApp = () => {
     if (selectedChat) fetchMessages(selectedChat.remoteJid);
   };
 
-  // estado da conexão: data.estado
   const connectionState = status?.estado ?? (status?.conectado ? 'open' : 'close');
 
   const filteredChats = chats.filter(c => {
@@ -461,16 +472,34 @@ const AdminWhatsApp = () => {
     ?? (msg.message?.locationMessage ? '[Localização]' : null)
     ?? '[mídia]';
 
-  // Pega o status mais recente do MessageUpdate
+  // Checkmarks coloridos: azul = lido, cinza = enviado/entregue
   const getMsgStatus = (msg) => {
     const updates = msg.MessageUpdate ?? [];
-    if (!updates.length) return null;
+    if (!updates.length) return { symbol: '✓', blue: false };
     const last = updates[updates.length - 1]?.status ?? '';
-    if (last === 'READ') return '✓✓'; // lido (azul idealmente, mas sem cor extra)
-    if (last === 'DELIVERY_ACK') return '✓✓'; // entregue
-    if (last === 'SERVER_ACK') return '✓';    // enviado ao servidor
-    return '✓';
+    if (last === 'READ')         return { symbol: '✓✓', blue: true };
+    if (last === 'DELIVERY_ACK') return { symbol: '✓✓', blue: false };
+    return { symbol: '✓', blue: false };
   };
+
+  // Agrupa mensagens consecutivas do mesmo remetente
+  const processedMessages = messages.map((msg, idx) => {
+    const isFromMe    = msg.key?.fromMe ?? false;
+    const prev        = messages[idx - 1];
+    const next        = messages[idx + 1];
+    const prevFromMe  = prev?.key?.fromMe ?? null;
+    const nextFromMe  = next?.key?.fromMe ?? null;
+
+    const getDate = (t) => t ? new Date(typeof t === 'number' ? t * 1000 : t) : null;
+    const msgDate  = getDate(msg.messageTimestamp);
+    const prevDate = getDate(prev?.messageTimestamp);
+
+    const showDateSep    = !prev || (msgDate && prevDate && msgDate.toDateString() !== prevDate.toDateString());
+    const isFirstInGroup = !prev || prevFromMe !== isFromMe || showDateSep;
+    const isLastInGroup  = !next || nextFromMe !== isFromMe;
+
+    return { ...msg, _showDateSep: showDateSep, _isFirstInGroup: isFirstInGroup, _isLastInGroup: isLastInGroup };
+  });
 
   return (
     <>
@@ -536,9 +565,9 @@ const AdminWhatsApp = () => {
 
           {/* ── Chat List ── */}
           <aside className="w-80 shrink-0 bg-white border-r flex flex-col">
-            <div className="p-4 border-b">
+            <div className="p-3 border-b">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                 <input
                   type="text"
                   placeholder="Buscar conversa…"
@@ -565,27 +594,26 @@ const AdminWhatsApp = () => {
                     <button
                       key={chat.id ?? jid}
                       onClick={() => handleSelectChat(chat)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 ${isSelected ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-gray-50
+                        ${isSelected ? 'bg-[#f0faf4] border-l-[3px] border-l-[#00D166]' : 'hover:bg-gray-50 border-l-[3px] border-l-transparent'}`}
                     >
-                      {/* Avatar com foto de perfil */}
                       <div className="relative shrink-0">
-                        <div className="w-11 h-11 rounded-full bg-[#0E3A2F] text-white flex items-center justify-center font-bold text-sm overflow-hidden">
-                          {chat.profilePicUrl
-                            ? <img src={chat.profilePicUrl} alt={name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
-                            : name[0]?.toUpperCase() ?? '#'
-                          }
-                        </div>
+                        <Avatar chat={chat} />
+                        {chat._unread && (
+                          <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#00D166] border-2 border-white" />
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <span className={`text-sm truncate ${chat._unread ? 'font-bold text-gray-900' : 'font-semibold text-gray-900'}`}>{name}</span>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className="text-xs text-gray-400">{fmtTime(chat.updatedAt)}</span>
-                            {chat._unread && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
-                          </div>
+                          <span className={`text-sm truncate ${chat._unread ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
+                            {name}
+                          </span>
+                          <span className={`text-[11px] shrink-0 ${chat._unread ? 'text-[#00a854] font-semibold' : 'text-gray-400'}`}>
+                            {fmtTime(chat.updatedAt)}
+                          </span>
                         </div>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">{fmtPhone(jid)}</p>
+                        <p className="text-xs text-gray-400 truncate mt-0.5">{fmtPhone(jid)}</p>
                       </div>
                     </button>
                   );
@@ -595,30 +623,32 @@ const AdminWhatsApp = () => {
           </aside>
 
           {/* ── Messages Panel ── */}
-          <main className="flex-1 flex flex-col min-w-0 bg-[#F0F2F5]">
+          <main className="flex-1 flex flex-col min-w-0 bg-[#efeae2]"
+            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23c8bfb0\' fill-opacity=\'0.18\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}
+          >
             {!selectedChat ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-3">
-                <MessageCircle size={48} className="text-gray-300" />
-                <p className="font-medium">Selecione uma conversa</p>
-                <p className="text-sm">ou use "Nova Mensagem" para enviar texto, imagem, documento ou localização</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-3">
+                <div className="w-20 h-20 rounded-full bg-white/60 flex items-center justify-center shadow-sm">
+                  <MessageCircle size={36} className="text-gray-300" />
+                </div>
+                <p className="font-semibold text-gray-600">Selecione uma conversa</p>
+                <p className="text-sm text-gray-400 text-center max-w-xs">
+                  ou use "Nova Mensagem" para enviar texto ou localização
+                </p>
               </div>
             ) : (
               <>
                 {/* Chat header */}
-                <div className="bg-white px-6 py-4 border-b flex items-center justify-between shrink-0">
+                <div className="bg-[#f0f2f5] px-4 py-3 border-b border-black/5 flex items-center justify-between shrink-0 shadow-sm">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#0E3A2F] text-white flex items-center justify-center font-bold overflow-hidden">
-                      {selectedChat.profilePicUrl
-                        ? <img src={selectedChat.profilePicUrl} alt={selectedChat.pushName} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
-                        : (selectedChat.pushName || '#')[0]?.toUpperCase()
-                      }
-                    </div>
+                    <Avatar chat={selectedChat} size="sm" />
                     <div>
-                      <p className="font-bold text-gray-900">{selectedChat.pushName || fmtPhone(selectedChat.remoteJid ?? selectedChat.id)}</p>
+                      <p className="font-semibold text-gray-900 text-sm leading-tight">
+                        {selectedChat.pushName || fmtPhone(selectedChat.remoteJid ?? selectedChat.id)}
+                      </p>
                       <p className="text-xs text-gray-500">{fmtPhone(selectedChat.remoteJid ?? selectedChat.id)}</p>
                     </div>
                   </div>
-                  {/* Quick actions for this chat */}
                   <button
                     onClick={() => openNovaMensagem(fmtJid(selectedChat.remoteJid))}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#0E3A2F] bg-[#00D166] hover:bg-[#00F178] rounded-lg transition-colors"
@@ -628,56 +658,75 @@ const AdminWhatsApp = () => {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                <div className="flex-1 overflow-y-auto px-4 py-3">
                   {msgLoading ? (
-                    <div className="flex justify-center pt-8"><Loader2 className="animate-spin text-green-500" size={24} /></div>
+                    <div className="flex justify-center pt-8"><Loader2 className="animate-spin text-green-600" size={24} /></div>
                   ) : messages.length === 0 ? (
                     <div className="text-center text-sm text-gray-400 pt-8">Nenhuma mensagem encontrada.</div>
                   ) : (
-                    messages.map((msg, idx) => {
+                    processedMessages.map((msg, idx) => {
                       const isFromMe = msg.key?.fromMe ?? false;
                       const text = getMsgText(msg);
+                      const status = getMsgStatus(msg);
+
+                      // Arredondamento baseado na posição no grupo
+                      const sentRadius = isFromMe
+                        ? msg._isLastInGroup ? 'rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-sm' : 'rounded-2xl'
+                        : msg._isLastInGroup ? 'rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-sm' : 'rounded-2xl';
+
                       return (
-                        <div key={msg.key?.id ?? idx} className={`flex ${isFromMe ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[70%] px-4 py-2 rounded-2xl shadow-sm text-sm transition-opacity ${
-                            msg._failed  ? 'bg-red-100 text-red-700 rounded-br-sm opacity-80' :
-                            msg._pending ? 'bg-[#00D166]/70 text-[#0E3A2F] rounded-br-sm opacity-70' :
-                            isFromMe     ? 'bg-[#00D166] text-[#0E3A2F] rounded-br-sm' :
-                                           'bg-white text-gray-900 rounded-bl-sm'
-                          }`}>
-                            <p className="leading-relaxed whitespace-pre-wrap">{text}</p>
-                            <p className={`text-[10px] mt-1 text-right flex items-center justify-end gap-1 ${isFromMe ? 'text-[#0E3A2F]/60' : 'text-gray-400'}`}>
-                              {msg._failed  ? 'Falha no envio' :
-                               msg._pending ? 'Enviando…' :
-                               fmtTime(msg.messageTimestamp)}
-                              {isFromMe && !msg._pending && !msg._failed && getMsgStatus(msg) && <span>{getMsgStatus(msg)}</span>}
-                            </p>
+                        <React.Fragment key={msg.key?.id ?? idx}>
+                          {msg._showDateSep && <DateSeparator ts={msg.messageTimestamp} />}
+
+                          <div
+                            className={`flex ${isFromMe ? 'justify-end' : 'justify-start'} ${msg._isFirstInGroup ? 'mt-3' : 'mt-0.5'}`}
+                          >
+                            <div className={`max-w-[65%] px-3 py-2 shadow-sm text-sm ${sentRadius} ${
+                              msg._failed  ? 'bg-red-100 text-red-700' :
+                              msg._pending ? 'bg-[#dcf8c6] text-[#0E3A2F] opacity-75' :
+                              isFromMe     ? 'bg-[#dcf8c6] text-gray-900' :
+                                             'bg-white text-gray-900'
+                            }`}>
+                              <p className="leading-relaxed whitespace-pre-wrap break-words">{text}</p>
+                              <p className={`text-[10px] mt-0.5 text-right flex items-center justify-end gap-1 select-none ${isFromMe ? 'text-gray-500' : 'text-gray-400'}`}>
+                                {msg._failed  ? <span className="text-red-500">Falha no envio</span> :
+                                 msg._pending ? <span className="opacity-60">Enviando…</span> :
+                                 fmtTime(msg.messageTimestamp)}
+                                {isFromMe && !msg._pending && !msg._failed && (
+                                  <span className={status.blue ? 'text-blue-500' : 'text-gray-400'}>
+                                    {status.symbol}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        </React.Fragment>
                       );
                     })
                   )}
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Send bar (texto only — para outros tipos usar "Nova Mensagem") */}
-                <div className="bg-white px-4 py-3 border-t flex items-end gap-3 shrink-0">
+                {/* Send bar */}
+                <div className="bg-[#f0f2f5] px-3 py-2 border-t border-black/5 flex items-end gap-2 shrink-0">
                   <textarea
+                    ref={textAreaRef}
                     value={sendText}
                     onChange={e => setSendText(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
                     }}
-                    placeholder="Digite uma mensagem de texto… (Enter para enviar, Shift+Enter para quebrar linha)"
+                    placeholder="Digite uma mensagem…"
                     rows={1}
-                    className="flex-1 p-3 border rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none max-h-32 leading-relaxed"
+                    className="flex-1 px-4 py-2.5 bg-white border-0 rounded-2xl text-sm focus:ring-2 focus:ring-green-400 outline-none resize-none leading-relaxed shadow-sm"
+                    style={{ maxHeight: 128 }}
                   />
                   <button
                     onClick={handleSend}
                     disabled={!sendText.trim()}
-                    className="p-3 bg-[#00D166] hover:bg-[#00F178] text-[#0E3A2F] rounded-xl transition-colors disabled:opacity-50 shrink-0"
+                    className="p-2.5 bg-[#00D166] hover:bg-[#00F178] text-[#0E3A2F] rounded-full transition-all disabled:opacity-40 disabled:scale-90 shrink-0 shadow-sm"
                   >
-                    <Send size={20} />
+                    <Send size={19} />
                   </button>
                 </div>
               </>

@@ -7,7 +7,7 @@ import userService from '@/services/user/userService';
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, isBlog } = useAuth();
   const [user, setUser] = useState(null)
 
   const isActive = (path) => location.pathname === path ? 'text-[#00D166]' : 'text-white hover:text-[#00D166]';
@@ -60,9 +60,9 @@ const Header = () => {
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
                 
-                {isAdmin && (
+                {(isAdmin || isBlog) && (
                   <Link 
-                    to="/admin" 
+                  to={isBlog ? "/admin/blog" : "/admin"}
                     className="flex items-center gap-2 px-3 py-1.5 bg-purple-600/20 text-purple-300 rounded-lg hover:bg-purple-600/30 transition-colors border border-purple-500/30"
                   >
                     <Shield size={16} /> <span className="text-xs font-bold uppercase">Painel Admin</span>
@@ -141,8 +141,8 @@ const Header = () => {
                      </div>
                   </div>
                   
-                  {isAdmin && (
-                    <Link to="/admin" className="flex items-center gap-2 w-full py-3 px-2 text-purple-300 hover:bg-purple-900/20 rounded-lg mb-2" onClick={closeMenu}>
+                  {(isAdmin || isBlog) && (
+                    <Link to={isBlog ? "/admin/blog" : "/admin"} className="flex items-center gap-2 w-full py-3 px-2 text-purple-300 hover:bg-purple-900/20 rounded-lg mb-2" onClick={closeMenu}>
                        <Shield size={18} /> Painel Administrativo
                     </Link>
                   )}
