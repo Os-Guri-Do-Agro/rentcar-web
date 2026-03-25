@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Helmet } from 'react-helmet';
 import {
   Loader2, Send, Search, RefreshCw, MessageCircle,
   Wifi, WifiOff, Phone, X, CheckCircle, AlertCircle,
-  Clock, Image, MapPin
+  Clock, Image, MapPin, QrCode, LogOut
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import whatsappService from '@/services/whatsapp/whatsapp-service';
@@ -229,6 +230,56 @@ const NovaMensagemModal = ({ onClose, onSent, defaultNumber = '' }) => {
   );
 };
 
+// ─── QR Code Modal ───────────────────────────────────────────────────────────
+
+const QrCodeModal = ({ qrData, qrLoading, refreshLoading, onClose, onRefresh }) => (
+  <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold text-gray-900">Conectar WhatsApp</h3>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+      </div>
+      <p className="text-sm text-gray-500 mb-4 text-center">
+        Abra o WhatsApp no celular, vá em <strong>Aparelhos conectados</strong> e escaneie o código abaixo.
+      </p>
+
+      <div className="flex items-center justify-center min-h-[220px]">
+        {qrLoading ? (
+          <Loader2 className="animate-spin text-green-500" size={40} />
+        ) : qrData?.qrcode ? (
+          <div className="p-3 bg-white rounded-2xl border border-gray-200 shadow-sm">
+            <QRCodeSVG
+              value={qrData.qrcode}
+              size={200}
+              bgColor="#ffffff"
+              fgColor="#0E3A2F"
+              level="M"
+            />
+          </div>
+        ) : (
+          <div className="text-center text-gray-400 text-sm">
+            <QrCode size={48} className="mx-auto mb-2 opacity-30" />
+            Não foi possível gerar o QR Code.
+          </div>
+        )}
+      </div>
+
+      {qrData?.estado && (
+        <p className="text-center text-xs text-gray-400 mt-2 capitalize">{qrData.estado}</p>
+      )}
+
+      <button
+        onClick={onRefresh}
+        disabled={refreshLoading || qrLoading}
+        className="w-full mt-4 py-2.5 border-2 border-[#0E3A2F] text-[#0E3A2F] font-bold rounded-xl hover:bg-[#0E3A2F]/5 flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+      >
+        {refreshLoading ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+        Atualizar QR Code
+      </button>
+    </div>
+  </div>
+);
+
 // ─── Date Separator ──────────────────────────────────────────────────────────
 
 const DateSeparator = ({ ts }) => (
@@ -242,13 +293,15 @@ const DateSeparator = ({ ts }) => (
 // ─── Avatar ──────────────────────────────────────────────────────────────────
 
 const Avatar = ({ chat, size = 'md' }) => {
-  const name = chat?.pushName || chat?.name || '#';
+  const name = chat?.pushName || chat?.name || fmtPhone(chat?.remoteJid ?? '') || '#';
   const cls = size === 'sm' ? 'w-9 h-9 text-xs' : 'w-11 h-11 text-sm';
+  const [imgFailed, setImgFailed] = React.useState(false);
+  const letter = name[0]?.toUpperCase() ?? '#';
   return (
     <div className={`${cls} rounded-full bg-[#0E3A2F] text-white flex items-center justify-center font-bold shrink-0 overflow-hidden`}>
-      {chat?.profilePicUrl
-        ? <img src={chat.profilePicUrl} alt={name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
-        : name[0]?.toUpperCase() ?? '#'
+      {chat?.profilePicUrl && !imgFailed
+        ? <img src={chat.profilePicUrl} alt={name} className="w-full h-full object-cover" onError={() => setImgFailed(true)} />
+        : letter
       }
     </div>
   );
@@ -274,6 +327,13 @@ const AdminWhatsApp = () => {
   const [showVerificar, setShowVerificar] = useState(false);
   const [showNova, setShowNova] = useState(false);
   const [novaMsgNumber, setNovaMsgNumber] = useState('');
+
+  const [showQrCode, setShowQrCode] = useState(false);
+  const [qrData, setQrData] = useState(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+  const [conectarLoading, setConectarLoading] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const messagesEndRef = useRef(null);
   const selectedChatRef = useRef(null);
@@ -447,13 +507,73 @@ const AdminWhatsApp = () => {
     setShowNova(true);
   };
 
+  const fetchQrCode = async () => {
+    setQrLoading(true);
+    try {
+      const res = await whatsappService.getWhatsappQrCode();
+      setQrData(unwrap(res));
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível gerar o QR Code.', variant: 'destructive' });
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleRefreshQr = async () => {
+    setRefreshLoading(true);
+    try {
+      const res = await whatsappService.getWhatsappQrCode();
+      setQrData(unwrap(res));
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível atualizar o QR Code.', variant: 'destructive' });
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
+
+  const handleConectar = async () => {
+    setConectarLoading(true);
+    setShowQrCode(true);
+    setQrData(null);
+    await fetchQrCode();
+    setConectarLoading(false);
+  };
+
+  const handleDesconectar = async () => {
+    setDisconnecting(true);
+    try {
+      await whatsappService.deleteWhatsappDesconectar();
+      window.location.reload();
+    } catch {
+      toast({ title: 'Erro ao desconectar', variant: 'destructive' });
+      setDisconnecting(false);
+    }
+  };
+
+  const connectionState = status?.estado ?? (status?.conectado ? 'open' : 'close');
+
+  // Poll status while QR modal is open — reload when connected
+  useEffect(() => {
+    if (!showQrCode) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await whatsappService.getStatus();
+        const data = unwrap(res);
+        if (data?.estado === 'open' || data?.conectado === true) {
+          window.location.reload();
+        }
+      } catch {
+        // silently ignore poll errors
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [showQrCode]);
+
   const handleRefresh = () => {
     fetchStatus();
     fetchChats();
     if (selectedChat) fetchMessages(selectedChat.remoteJid);
   };
-
-  const connectionState = status?.estado ?? (status?.conectado ? 'open' : 'close');
 
   const filteredChats = chats.filter(c => {
     if (!chatSearch) return true;
@@ -513,6 +633,15 @@ const AdminWhatsApp = () => {
           onSent={fetchChats}
         />
       )}
+      {showQrCode && (
+        <QrCodeModal
+          qrData={qrData}
+          qrLoading={qrLoading}
+          refreshLoading={refreshLoading}
+          onClose={() => setShowQrCode(false)}
+          onRefresh={handleRefreshQr}
+        />
+      )}
 
       <div className="flex flex-col h-[calc(100vh-4rem)] bg-gray-50">
 
@@ -539,15 +668,36 @@ const AdminWhatsApp = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {connectionState === 'open' ? (
+              <button
+                onClick={handleDesconectar}
+                disabled={disconnecting}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {disconnecting ? <Loader2 className="animate-spin" size={16} /> : <LogOut size={16} />}
+                Desconectar
+              </button>
+            ) : (
+              <button
+                onClick={handleConectar}
+                disabled={conectarLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-bold text-[#0E3A2F] bg-[#00D166] hover:bg-[#00F178] rounded-xl transition-colors disabled:opacity-50"
+              >
+                {conectarLoading ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
+                Conectar
+              </button>
+            )}
             <button
               onClick={() => setShowVerificar(true)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              disabled={connectionState !== 'open'}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Phone size={16} /> Verificar Número
             </button>
             <button
               onClick={() => openNovaMensagem()}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-[#0E3A2F] bg-[#00D166] hover:bg-[#00F178] rounded-xl transition-colors"
+              disabled={connectionState !== 'open'}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-[#0E3A2F] bg-[#00D166] hover:bg-[#00F178] rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send size={16} /> Nova Mensagem
             </button>
@@ -560,8 +710,29 @@ const AdminWhatsApp = () => {
           </div>
         </div>
 
+        {/* ── Disconnected Screen ── */}
+        {connectionState !== 'open' && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-gray-50">
+            <div className="w-20 h-20 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center shadow-sm">
+              <WifiOff size={36} className="text-gray-300" />
+            </div>
+            <div className="text-center">
+              <p className="font-semibold text-gray-700 text-lg">WhatsApp desconectado</p>
+              <p className="text-sm text-gray-400 mt-1">Conecte para acessar conversas e enviar mensagens.</p>
+            </div>
+            <button
+              onClick={handleConectar}
+              disabled={conectarLoading}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-[#0E3A2F] bg-[#00D166] hover:bg-[#00F178] rounded-xl transition-colors disabled:opacity-50"
+            >
+              {conectarLoading ? <Loader2 className="animate-spin" size={16} /> : <QrCode size={16} />}
+              Conectar via QR Code
+            </button>
+          </div>
+        )}
+
         {/* ── Split Panel ── */}
-        <div className="flex flex-1 min-h-0">
+        {connectionState === 'open' && <div className="flex flex-1 min-h-0">
 
           {/* ── Chat List ── */}
           <aside className="w-80 shrink-0 bg-white border-r flex flex-col">
@@ -732,7 +903,7 @@ const AdminWhatsApp = () => {
               </>
             )}
           </main>
-        </div>
+        </div>}
       </div>
     </>
   );

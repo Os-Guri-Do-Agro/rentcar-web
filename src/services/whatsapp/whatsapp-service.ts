@@ -114,6 +114,20 @@ class WhatsappService {
       'Erro ao verificar número'
     )
   }
+
+  getWhatsappQrCode(): Promise<any> {
+    return this.handleRequest(
+      api.get('/whatsapp/qrcode', { headers: this.authHeader() }),
+      'Erro ao buscar QR Code do WhatsApp'
+    )
+  }
+
+  deleteWhatsappDesconectar(): Promise<any> {
+    return this.handleRequest(
+      api.delete('/whatsapp/desconectar', { headers: this.authHeader() }),
+      'Erro ao desconectar WhatsApp'
+    )
+  }
 }
 
 export default new WhatsappService()
