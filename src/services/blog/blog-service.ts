@@ -27,6 +27,13 @@ class blogService {
     )
   }
 
+  getBlogPagination(title: string, categoriaId: string, page: number, limit: number): Promise<any> {
+    return this.handleRequest(
+      api.get(`/blog/pagination?title=${title}&categoriaID=${categoriaId}&page=${page}&limit=${limit}`, { headers: this.authHeader() }),
+      'Erro ao buscar blog'
+    )
+  }
+
   postBlog(data: any): Promise<any> {
     return this.handleRequest(
       api.post('/blog', data, { headers: this.authHeader() }),
