@@ -21,7 +21,7 @@ const AdminBlogEditar = () => {
       .then(res => {
         const p = res?.data;
         if (!p) return navigate('/admin/blog');
-        setForm({ titulo: p.titulo, subTitulo: p.subTitulo || '', conteudo: p.conteudo || '', conclusao: p.conclusao || '', ativo: p.ativo });
+        setForm({ titulo: p.titulo, subTitulo: p.subTitulo || '', conteudo: p.conteudo || '', conclusao: p.conclusao || '', ativo: p.ativo, categoriaBlogId: p.categoriaBlogId || p.categoriaBlog?.id || '' });
         setPhotoPreview(p.imagem_url || '');
       })
       .catch(() => navigate('/admin/blog'))

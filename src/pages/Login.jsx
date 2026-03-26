@@ -62,7 +62,8 @@ const Login = () => {
             title: "Erro ao fazer login",
             description: error.message || "Verifique suas credenciais e tente novamente",
             variant: "destructive",
-            duration: 4000,
+            duration: 3000,
+            className: "bg-red-600 text-white"
         });
     } finally {
         setIsSubmitting(false);

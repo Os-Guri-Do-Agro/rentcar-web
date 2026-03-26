@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import blogService from '@/services/blog/blog-service';
 import BlogForm from '@/components/admin/BlogForm';
 
-const EMPTY_FORM = { titulo: '', subTitulo: '', conteudo: '', conclusao: '', ativo: true };
+const EMPTY_FORM = { titulo: '', subTitulo: '', conteudo: '', conclusao: '', ativo: true, categoriaBlogId: '' };
 
 const AdminBlogNovo = () => {
   const navigate = useNavigate();

@@ -77,6 +77,8 @@ class blogService {
       'Erro ao atualizar blog'
     )
   }
+
+  
 }
 
 export default new blogService()
