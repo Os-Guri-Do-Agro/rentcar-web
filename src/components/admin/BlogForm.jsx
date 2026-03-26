@@ -90,8 +90,9 @@ const BlogForm = ({ form, onChange, photoPreview, onPhotoChange, onSubmit, onCan
           <label className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 w-fit">
             <Upload size={16} />
             <span className="text-sm">Upload Imagem</span>
-            <input type="file" className="hidden" accept="image/*" onChange={onPhotoChange} />
+            <input type="file" className="hidden" accept="image/jpeg,image/png" onChange={onPhotoChange} />
           </label>
+          <p className="text-xs text-gray-400 mt-1.5">Formatos: JPEG, PNG — máx. 5MB</p>
           {photoPreview && (
             <img src={photoPreview} alt="preview" className="mt-3 h-36 rounded-xl object-cover border" />
           )}

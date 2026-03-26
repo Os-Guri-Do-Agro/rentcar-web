@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { Loader2, Trash2, Edit2, Plus, Search, Eye, EyeOff, AlertTriangle, Tag, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, Trash2, Edit2, Plus, Search, Eye, EyeOff, AlertTriangle, Tag, ChevronDown, ChevronUp, Image, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -22,6 +22,11 @@ const AdminBlog = () => {
   const [categoriasLoading, setCategoriasLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteCatId, setDeleteCatId] = useState(null);
+
+  const [bannerOpen, setBannerOpen] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState(null);
+  const [bannerLoading, setBannerLoading] = useState(false);
+  const [bannerSaving, setBannerSaving] = useState(false);
 
   useEffect(() => { fetchPosts(); }, []);
 
@@ -52,6 +57,46 @@ const AdminBlog = () => {
   const handleToggleCategorias = () => {
     if (!categoriasOpen && categorias.length === 0) fetchCategorias();
     setCategoriasOpen(v => !v);
+  };
+
+  const handleToggleBanner = () => {
+    if (!bannerOpen && bannerUrl === null) fetchBanner();
+    setBannerOpen(v => !v);
+  };
+
+  const fetchBanner = async () => {
+    setBannerLoading(true);
+    try {
+      const res = await blogService.getBlogBanner();
+      setBannerUrl(res?.data?.banner_url || '');
+    } catch {
+      toast({ title: 'Erro ao carregar banner', variant: 'destructive' });
+    } finally {
+      setBannerLoading(false);
+    }
+  };
+
+  const handleBannerUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Imagem muito grande', description: 'O tamanho máximo permitido é 5MB.', variant: 'destructive' });
+      e.target.value = '';
+      return;
+    }
+    setBannerSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await blogService.postBlogBanner(fd);
+      setBannerUrl(res?.data?.banner_url || '');
+      toast({ title: 'Banner atualizado!', className: 'bg-green-600 text-white' });
+    } catch {
+      toast({ title: 'Erro ao salvar banner', variant: 'destructive' });
+    } finally {
+      setBannerSaving(false);
+      e.target.value = '';
+    }
   };
 
   const handleDelete = async () => {
@@ -177,6 +222,58 @@ const AdminBlog = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Banner section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+        <button
+          onClick={handleToggleBanner}
+          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 rounded-xl transition-colors"
+        >
+          <div className="flex items-center gap-2 font-bold text-[#0E3A2F]">
+            <Image size={18} />
+            Banner do Blog
+          </div>
+          {bannerOpen ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+        </button>
+
+        {bannerOpen && (
+          <div className="border-t border-gray-100 p-4">
+            {bannerLoading ? (
+              <div className="text-center py-6"><Loader2 className="animate-spin mx-auto text-[#00D166]" size={28} /></div>
+            ) : (
+              <div className="flex flex-col md:flex-row items-start gap-5">
+                {/* Preview */}
+                <div className="flex-1 w-full rounded-xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center min-h-[120px]">
+                  {bannerUrl ? (
+                    <img src={bannerUrl} alt="Banner" className="w-full h-36 object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-gray-300 py-8">
+                      <Image size={36} />
+                      <span className="text-sm">Nenhum banner cadastrado</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload */}
+                <div className="flex flex-col gap-2 md:w-48">
+                  <p className="text-xs text-gray-500">Formatos: JPEG, PNG — máx. 5MB</p>
+                  <label className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm cursor-pointer transition-colors ${bannerSaving ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#0E3A2F] text-white hover:bg-[#165945]'}`}>
+                    {bannerSaving ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+                    {bannerSaving ? 'Enviando...' : bannerUrl ? 'Trocar banner' : 'Enviar banner'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      disabled={bannerSaving}
+                      onChange={handleBannerUpload}
+                    />
+                  </label>
+                </div>
               </div>
             )}
           </div>

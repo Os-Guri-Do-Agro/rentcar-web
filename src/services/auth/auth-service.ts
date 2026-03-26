@@ -30,6 +30,20 @@ class authService {
     )
   }
 
+  postConfirmarEmail(data: { token_hash: string }): Promise<any> {
+    return this.handleRequest(
+      api.post('/auth/confirmar-email', data),
+      'Erro ao confirmar e-mail'
+    )
+  }
+
+  postReenviarConfirmacao(data: { email: string }): Promise<any> {
+    return this.handleRequest(
+      api.post('/auth/reenviar-confirmacao', data),
+      'Erro ao reenviar confirmação'
+    )
+  }
+
 }
 
 export default new authService()

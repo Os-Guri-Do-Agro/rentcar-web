@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Car, Users, Calendar,
   LogOut, Menu, X, FileText,
-  DollarSign, Shield, Mail, Layers, MessageSquare, Newspaper, MessageCircle
+  DollarSign, Layers, MessageSquare, Newspaper, LucideShieldMinus, Logs
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminMode } from '@/context/AdminModeContext';
@@ -30,8 +30,9 @@ const AdminLayout = () => {
     { to: "/admin/secoes", icon: Layers, label: "Seções Home" },
     { to: "/admin/avaliacoes", icon: MessageSquare, label: "Avaliações" },
     { to: "/admin/conteudo", icon: FileText, label: "Conteúdo Legal" },
-    { to: "/admin/whatsapp", icon: MessageCircle, label: "WhatsApp" },
-    { to: "/admin/logs", icon: Shield, label: "Logs de Sistema" },
+    // { to: "/admin/whatsapp", icon: MessageCircle, label: "WhatsApp" },
+    { to: "/admin/logs", icon: Logs, label: "Logs de Sistema" },
+    { to: "/admin/whatsapp-config", icon: LucideShieldMinus, label: "Admin Configs" },
   ];
 
   const blogNavItems = [

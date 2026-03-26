@@ -1,3 +1,4 @@
+/*
 import React, { useState, useEffect, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Helmet } from 'react-helmet';
@@ -910,3 +911,4 @@ const AdminWhatsApp = () => {
 };
 
 export default AdminWhatsApp;
+*/

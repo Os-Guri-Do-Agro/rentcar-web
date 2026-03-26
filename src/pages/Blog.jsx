@@ -135,6 +135,7 @@ const Blog = () => {
   const [featured, setFeatured] = useState(null);
   const [sideCards, setSideCards] = useState([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
+  const [bannerUrl, setBannerUrl] = useState(null);
 
   // Seção 2 — paginado com filtros
   const [gridPosts, setGridPosts] = useState([]);
@@ -148,18 +149,20 @@ const Blog = () => {
   const [categoriaId, setCategoriaId] = useState('');
   const [page, setPage] = useState(1);
 
-  // Carrega destaques e categorias uma vez
+  // Carrega destaques, categorias e banner uma vez
   useEffect(() => {
     Promise.all([
       blogService.getBlog(),
       categoriaBlogService.getCategoriaBlog(),
-    ]).then(([blogRes, catRes]) => {
+      blogService.getBlogBanner(),
+    ]).then(([blogRes, catRes, bannerRes]) => {
       if (blogRes?.success) {
         const data = blogRes.data || [];
         setFeatured(data[0] || null);
         setSideCards(data.slice(1, 5));
       }
       if (catRes?.success) setCategorias(catRes.data || []);
+      if (bannerRes?.success) setBannerUrl(bannerRes.data?.banner_url || null);
     }).finally(() => setLoadingFeatured(false));
   }, []);
 
@@ -252,15 +255,15 @@ const Blog = () => {
           )}
 
           {/* Banner anúncio */}
-          <div
-            onClick={() => {}}
-            className="cursor-pointer w-full rounded-2xl overflow-hidden border border-dashed border-[#00D166]/50 bg-gradient-to-r from-[#0E3A2F] to-[#165945] flex items-center justify-center h-28 md:h-36 hover:opacity-90 transition-opacity select-none"
-          >
-            <div className="text-center text-white">
-              <p className="text-lg font-bold tracking-wide">Espaço para Anúncio</p>
-              <p className="text-sm text-gray-400 mt-1">Clicável — imagem e rota a definir</p>
+          {bannerUrl ? (
+            <div className="w-full rounded-2xl overflow-hidden h-28 md:h-36">
+              <img
+                src={bannerUrl}
+                alt="Banner"
+                className="w-full h-full object-cover"
+              />
             </div>
-          </div>
+          ) : null}
         </section>
 
         {/* ── Seção 2: Filtros + Grid paginado (server-side) ── */}

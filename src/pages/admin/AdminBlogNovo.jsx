@@ -19,6 +19,11 @@ const AdminBlogNovo = () => {
   const handlePhoto = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Imagem muito grande', description: 'O tamanho máximo permitido é 5MB.', variant: 'destructive' });
+      e.target.value = '';
+      return;
+    }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
   };

@@ -33,6 +33,7 @@ import LocacaoCorporativa from '@/pages/LocacaoCorporativa';
 import TermosDeUso from '@/pages/TermosDeUso';
 import Privacidade from '@/pages/Privacidade';
 import NormaLGPD from '@/pages/NormaLGPD';
+import ConfirmarEmail from '@/pages/ConfirmarEmail';
 
 // Protected User Pages
 import RequestAnalysis from '@/pages/RequestAnalysis';
@@ -73,7 +74,7 @@ import AdminEmails from '@/pages/admin/AdminEmails';
 import DiagnosticoPage from '@/pages/DiagnosticoPage';
 import AdminCarPricing from '@/pages/admin/AdminCarPricing'; 
 import AdminWhatsAppConfig from './pages/admin/AdminWhatsAppConfig';
-import AdminWhatsApp from '@/pages/admin/AdminWhatsApp';
+// import AdminWhatsApp from '@/pages/admin/AdminWhatsApp';
 
 // Bloqueia usuários com role 'blog' de acessar rotas que não são de blog
 const AdminOnlyGuard = () => {
@@ -127,6 +128,7 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/auth/confirm" element={<ConfirmarEmail />} />
 
                 <Route path="/termos-condicoes" element={<Navigate to="/termos-regras" replace />} />
                 <Route path="/regras-gerais" element={<Navigate to="/termos-regras" replace />} />
@@ -155,8 +157,8 @@ function App() {
                     <Route path="frota" element={<AdminFleetManager />} />
                     <Route path="precos-carros" element={<AdminCarPricing />} />
                     <Route path="carros-destaque" element={<AdminCarrosDestaque />} />
-                    <Route path="whatsapp-config" element={<AdminWhatsAppConfig />} />
-                    <Route path="whatsapp" element={<AdminWhatsApp />} />
+                    <Route path="whatsapp-config" element={<AdminWhatsAppConfig />} /> 
+                    {/* <Route path="whatsapp" element={<AdminWhatsApp />} /> */}
                     <Route path="reservas" element={<AdminReservations />} />
                     <Route path="reserva/:reservaId" element={<AdminDetalhesReserva />} />
                     <Route path="clientes" element={<AdminClientes />} />

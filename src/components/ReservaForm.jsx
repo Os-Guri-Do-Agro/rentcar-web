@@ -41,6 +41,8 @@ const ReservaForm = ({ car }) => {
     const [dataRetirada, setDataRetirada] = useState('');
     const [dataDevolucao, setDataDevolucao] = useState('');
     const [duracaoDias, setDuracaoDias] = useState(0);
+    const [horaRetirada, setHoraRetirada] = useState('09:00');
+    const [horaDevolucao, setHoraDevolucao] = useState('09:00');
 
     // Descobre quais tipos têm planos para este carro (3 requests paralelos na montagem)
     useEffect(() => {
@@ -198,6 +200,8 @@ const ReservaForm = ({ car }) => {
             franquia_km: kmFranquia,
             dataRetirada,
             dataDevolucao,
+            horaRetirada,
+            horaDevolucao,
             valorTotal: precoTotal,
             valorDiario: preco,
             km_contratado: kmFranquia,
@@ -323,6 +327,26 @@ const ReservaForm = ({ car }) => {
                                 days={duracaoDias}
                                 plan={categoria}
                             />
+                            <div className="grid grid-cols-2 gap-3 mt-3">
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Hora de retirada</label>
+                                    <input
+                                        type="time"
+                                        value={horaRetirada}
+                                        onChange={e => setHoraRetirada(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00D166]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Hora de devolução</label>
+                                    <input
+                                        type="time"
+                                        value={horaDevolucao}
+                                        onChange={e => setHoraDevolucao(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00D166]"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     )}
 

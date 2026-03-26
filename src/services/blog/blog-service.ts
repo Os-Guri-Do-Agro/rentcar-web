@@ -85,6 +85,22 @@ class blogService {
     )
   }
 
+  getBlogBanner(): Promise<any> {
+    return this.handleRequest(
+      api.get('/blog/banner', { headers: this.authHeader() }),
+      'Erro ao buscar banner do blog'
+    )
+  }
+
+  postBlogBanner(data: FormData): Promise<any> {
+    return this.handleRequest(
+      api.post('/blog/banner', data, {
+        headers: { ...this.authHeader(), 'Content-Type': 'multipart/form-data' },
+      }),
+      'Erro ao criar banner do blog'
+    )
+  }
+
   
 }
 

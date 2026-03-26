@@ -90,6 +90,13 @@ class reservasService {
     )
   }
 
+  postReservaGuest(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/reservas/guest', data),
+      'Erro ao criar reserva como visitante'
+    )
+  }
+
   postReservaComArquivos(data: FormData): Promise<any> {
     return this.handleRequest(
       api.post('/reservas/com-arquivos', data, {
