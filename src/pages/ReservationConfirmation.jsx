@@ -3,12 +3,12 @@ import { useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { CheckCircle, Send, FileText, Loader2 } from 'lucide-react';
-import { getReservaById } from '@/services/reservaService';
 import { getAdminConfigs } from '@/services/adminService';
 import { generateWhatsAppMessage, generateWhatsAppURL } from '@/lib/whatsappUtils';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import DocumentosDisplay from '@/components/DocumentosDisplay';
+import reservasServices from '@/services/reservas/reservas-services';
 
 const ReservationConfirmation = () => {
   const { reservaId } = useParams();
@@ -22,11 +22,12 @@ const ReservationConfirmation = () => {
       setLoading(true);
       setError(null);
       
-      const [reservaData, configsData] = await Promise.all([getReservaById(reservaId), getAdminConfigs()]);
+      const [reservaData, configsData] = await Promise.all([reservasServices.getReservasById(reservaId), getAdminConfigs()]);
       
-      if (!reservaData) throw new Error("Reserva não encontrada");
+      const reserva = reservaData?.data ?? reservaData;
+      if (!reserva) throw new Error("Reserva não encontrada");
 
-      setReservation(reservaData);
+      setReservation(reserva);
       setConfigs(configsData);
       
     } catch (err) {
@@ -45,22 +46,27 @@ const ReservationConfirmation = () => {
   const whatsappNumber = configs?.whatsapp_numero || '5511999999999';
   const whatsappUrl = generateWhatsAppURL(whatsappNumber, generateWhatsAppMessage(car, reservation, reservation.users, 'Particular'));
   
-  // Extract docs from JSON
-  const docRow = reservation.reserva_documentos && reservation.reserva_documentos[0];
-  const docs = docRow?.documentos || [];
+  const docs = (reservation.reserva_documentos || []).map(doc => ({
+    id: doc.id,
+    tipo: doc.tipo_documento,
+    nome: doc.arquivo_nome,
+    tamanho: doc.arquivo_tamanho,
+    url: doc.url_documento,
+    data_upload: doc.created_at,
+  }));
 
   return (
     <>
       <Helmet><title>Confirmação de Reserva - JL RENT A CAR</title></Helmet>
 
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center mb-10">
+        <div className="max-w-6xl mx-auto text-center mb-10">
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="text-[#00D166]" size={40} /></motion.div>
             <h1 className="text-3xl font-bold text-[#0E3A2F]">Reserva Pré-Agendada!</h1>
             <p className="text-gray-600 mt-2">Sua solicitação foi registrada com sucesso e os documentos estão em análise.</p>
         </div>
 
-        <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
                 <div className="bg-[#0E3A2F] px-6 py-4 flex justify-between items-center"><h3 className="text-white font-bold">Resumo #{reservation.id.slice(0, 8)}</h3><span className="bg-[#00D166] text-[#0E3A2F] text-xs font-bold px-3 py-1 rounded-full uppercase">{reservation.status}</span></div>
@@ -79,10 +85,33 @@ const ReservationConfirmation = () => {
                     </div>
                   </div>
 
+                  {/* Period & Times */}
+                  <div className="border-t border-gray-100 pt-5 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase font-bold tracking-wide mb-1">Retirada</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {new Date(reservation.data_retirada).toLocaleDateString('pt-BR')}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        às {reservation.hora_retirada_solicitada || '—'}
+                        {reservation.hora_retirada && reservation.hora_retirada !== reservation.hora_retirada_solicitada && (
+                          <span className="ml-1 text-amber-600">(confirmado: {reservation.hora_retirada})</span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase font-bold tracking-wide mb-1">Devolução</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {new Date(reservation.data_devolucao).toLocaleDateString('pt-BR')}
+                      </p>
+                      <p className="text-xs text-gray-500">às {reservation.hora_devolucao || '—'}</p>
+                    </div>
+                  </div>
+
                   {/* Documents Section */}
                   <div className="border-t border-gray-100 pt-6 mt-6">
                       <h4 className="text-sm font-bold text-gray-700 uppercase mb-4 flex items-center gap-2"><FileText size={16}/> Documentos Enviados</h4>
-                      <DocumentosDisplay documentos={docs} />
+                      <DocumentosDisplay documentos={docs} reservaId={reservation.id} />
                   </div>
 
                 </div>

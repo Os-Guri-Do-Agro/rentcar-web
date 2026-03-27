@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle, Car } from 'lucide-react';
 import { useReserva } from '@/context/ReservaContext';
-import { calcularDataDevolucao } from '@/services/reservaService';
+import { calcularDataDevolucao } from '@/lib/dateUtils';
 import { calcularPrecoReserva } from '@/services/calculoPrecoService';
 import ResumoPrecoSimulacao from './ResumoPrecoSimulacao';
 import { cn } from '@/lib/utils';

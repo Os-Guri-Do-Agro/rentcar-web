@@ -45,7 +45,6 @@ export const abrirTelefone = (telefone) => {
 };
 
 export const abrirMaps = (mapsUrl) => {
-    console.log("[linkUtils] Abrindo Google Maps:", mapsUrl);
     if (!mapsUrl) return;
     window.open(mapsUrl, '_blank', 'noopener,noreferrer');
 };

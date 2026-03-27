@@ -2,11 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Loader2, Trash2, Edit2, Plus, Star, Eye, EyeOff, Search, Calendar, MoveUp, MoveDown, Upload, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-    getAllAvaliacoesAdmin, createAvaliacao, updateAvaliacao, deleteAvaliacao, toggleAvaliacao, reorderAvaliacoes 
-} from '@/services/avaliacoesService';
-import { uploadFotoAvaliacao } from '@/services/uploadService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import avaliacoesService from '@/services/avaliacoes/avaliacoes-service';
 
 const AdminAvaliacoes = () => {
     const [reviews, setReviews] = useState([]);
@@ -18,8 +16,8 @@ const AdminAvaliacoes = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState({ 
-        nome_cliente: '', 
-        texto: '', 
+        nome_cliente: '',
+        texto: '',
         estrelas: 5, 
         foto_cliente_url: '', 
         ativo: true, 
@@ -27,6 +25,7 @@ const AdminAvaliacoes = () => {
         data_avaliacao: '' 
     });
     const [uploading, setUploading] = useState(false);
+    const [deleteId, setDeleteId] = useState(null);
     
     const { toast } = useToast();
 
@@ -38,8 +37,8 @@ const AdminAvaliacoes = () => {
         setLoading(true);
         console.log("Fetching reviews...");
         try {
-            const data = await getAllAvaliacoesAdmin();
-            setReviews(data || []);
+            const data = await avaliacoesService.getAvaliacoes();
+            setReviews(data.data || []);
         } catch (error) {
             console.error(error);
             toast({ title: "Erro ao carregar avaliações", variant: "destructive" });
@@ -54,13 +53,16 @@ const AdminAvaliacoes = () => {
 
         setUploading(true);
         try {
-            const result = await uploadFotoAvaliacao(file);
-            setForm(prev => ({ 
-                ...prev, 
-                foto_cliente_url: result.url,
-                foto_cliente_arquivo: result.path 
-            }));
-            toast({ title: "Foto enviada com sucesso!" });
+            const formData = new FormData();
+            formData.append('file', file);
+            if (editing?.id) {
+                const result = await avaliacoesService.postPhotoAvaliacoes(editing.id, formData);
+                setForm(prev => ({ ...prev, foto_cliente_url: result.url || result.foto_cliente_url || '' }));
+            } else {
+                const tempUrl = URL.createObjectURL(file);
+                setForm(prev => ({ ...prev, foto_cliente_url: tempUrl, _photoFile: file }));
+            }
+            toast({ title: "Foto enviada com sucesso!", className: "bg-green-600 text-white border-none" });
         } catch (error) {
             toast({ title: "Erro ao enviar foto", variant: "destructive" });
         } finally {
@@ -76,17 +78,23 @@ const AdminAvaliacoes = () => {
 
         try {
             // Map form fields to DB schema if needed (DB has both texto and texto_avaliacao in earlier tasks, sticking to 'texto' from schema in task 8)
-            const submitData = {
-                ...form,
-                texto: form.texto,
-                foto_cliente: form.foto_cliente_url // Backward compatibility
+            const { _photoFile, foto_cliente_url, data_avaliacao, ...rest } = form;
+            const submitData = { nome_cliente: rest.nome_cliente, texto: rest.texto, estrelas: rest.estrelas, ativo: rest.ativo, ordem: rest.ordem };
+
+            const uploadFoto = async (id) => {
+                if (!_photoFile) return;
+                const formData = new FormData();
+                formData.append('file', _photoFile);
+                await avaliacoesService.postPhotoAvaliacoes(id, formData);
             };
 
             if (editing) {
-                await updateAvaliacao(editing.id, submitData);
+                await avaliacoesService.patchAvaliacoes(editing.id, submitData);
+                await uploadFoto(editing.id);
                 toast({ title: "Avaliação atualizada", className: "bg-green-600 text-white" });
             } else {
-                await createAvaliacao({ ...submitData, ordem: reviews.length });
+                const created = await avaliacoesService.postAvaliacoes({ ...submitData, ordem: reviews.length });
+                await uploadFoto(created?.id);
                 toast({ title: "Avaliação criada", className: "bg-green-600 text-white" });
             }
             setModalOpen(false);
@@ -97,22 +105,23 @@ const AdminAvaliacoes = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Tem certeza que deseja excluir esta avaliação?")) return;
+    const handleDelete = async () => {
         try {
-            await deleteAvaliacao(id);
-            toast({ title: "Avaliação excluída" });
+            await avaliacoesService.deleteAvaliacoesById(deleteId);
+            toast({ title: "Avaliação excluída", className: "bg-green-600 text-white border-none" });
             fetchReviews();
         } catch (e) {
             toast({ title: "Erro ao excluir", variant: "destructive" });
+        } finally {
+            setDeleteId(null);
         }
     };
 
     const handleToggle = async (id, status) => {
         try {
-            await toggleAvaliacao(id, status);
+            await avaliacoesService.patchAvaliacoes(id, { ativo: !status });
             fetchReviews();
-            toast({ title: status ? "Avaliação desativada" : "Avaliação ativada" });
+            toast({ title: status ? "Avaliação desativada" : "Avaliação ativada", className: "bg-green-600 text-white border-none" });
         } catch (e) {
             toast({ title: "Erro ao alterar status", variant: "destructive" });
         }
@@ -130,7 +139,7 @@ const AdminAvaliacoes = () => {
         
         setReviews(newReviews); 
         try {
-            await reorderAvaliacoes(newReviews);
+            await Promise.all(newReviews.map((r, i) => avaliacoesService.patchAvaliacoes(r.id, { ordem: i })));
         } catch(e) {
             toast({ title: "Erro ao reordenar", variant: "destructive" });
             fetchReviews(); 
@@ -240,7 +249,7 @@ const AdminAvaliacoes = () => {
                                 <button onClick={() => openEdit(review)} className="p-2 text-blue-500 hover:text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100" title="Editar">
                                     <Edit2 size={18}/>
                                 </button>
-                                <button onClick={() => handleDelete(review.id)} className="p-2 text-red-500 hover:text-red-700 bg-red-50 rounded-lg hover:bg-red-100" title="Excluir">
+                                <button onClick={() => setDeleteId(review.id)} className="p-2 text-red-500 hover:text-red-700 bg-red-50 rounded-lg hover:bg-red-100" title="Excluir">
                                     <Trash2 size={18}/>
                                 </button>
                             </div>
@@ -249,23 +258,36 @@ const AdminAvaliacoes = () => {
                 </div>
             )}
 
+            <AlertDialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir avaliação</AlertDialogTitle>
+                        <AlertDialogDescription>Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Excluir</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <Dialog open={modalOpen} onOpenChange={setModalOpen}>
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader><DialogTitle>{editing ? 'Editar Avaliação' : 'Nova Avaliação'}</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-4">
                         <div>
-                            <label className="text-sm font-bold block mb-1">Nome do Cliente *</label>
+                            <span className="text-sm font-bold block mb-1">Nome do Cliente *</span>
                             <input className="w-full p-2 border rounded-lg" value={form.nome_cliente} onChange={e => setForm({...form, nome_cliente: e.target.value})} />
                         </div>
                         
                         <div>
-                            <label className="text-sm font-bold block mb-1">Foto do Cliente</label>
+                            <span className="text-sm font-bold block mb-1">Foto do Cliente</span>
                             <div className="flex items-center gap-2">
-                                <label className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
+                                <span role="button" onClick={() => document.getElementById('foto-upload').click()} className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
                                     {uploading ? <Loader2 className="animate-spin" size={16}/> : <Upload size={16}/>}
                                     <span className="text-sm">Upload Foto</span>
-                                    <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
-                                </label>
+                                    <input id="foto-upload" type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                                </span>
                                 <span className="text-xs text-gray-400">ou</span>
                                 <input className="flex-grow p-2 border rounded-lg" placeholder="URL da imagem..." value={form.foto_cliente_url} onChange={e => setForm({...form, foto_cliente_url: e.target.value})} />
                             </div>
@@ -277,19 +299,19 @@ const AdminAvaliacoes = () => {
                         </div>
 
                         <div>
-                            <label className="text-sm font-bold block mb-1">Depoimento *</label>
+                            <span className="text-sm font-bold block mb-1">Depoimento *</span>
                             <textarea className="w-full p-2 border rounded-lg h-24" value={form.texto} onChange={e => setForm({...form, texto: e.target.value})} />
                         </div>
 
                         <div className="flex gap-6">
                             <div className="flex-1">
-                                <label className="text-sm font-bold block mb-1">Estrelas</label>
+                                <span className="text-sm font-bold block mb-1">Estrelas</span>
                                 <select className="w-full p-2 border rounded-lg bg-white" value={form.estrelas} onChange={e => setForm({...form, estrelas: parseInt(e.target.value)})}>
                                     {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} Estrelas</option>)}
                                 </select>
                             </div>
                             <div className="flex-1">
-                                <label className="text-sm font-bold block mb-1">Data</label>
+                                <span className="text-sm font-bold block mb-1">Data</span>
                                 <input type="date" className="w-full p-2 border rounded-lg" value={form.data_avaliacao} onChange={e => setForm({...form, data_avaliacao: e.target.value})} />
                             </div>
                         </div>

@@ -73,27 +73,31 @@ const ResumoReservaCard = ({ carro, reserva, isExpandedMobile = false }) => {
                   <div>
                     <p className="text-xs text-gray-500 uppercase font-bold tracking-wide">Retirada</p>
                     <p className="text-sm font-medium text-gray-900">{formatDate(reserva?.dataRetirada)}</p>
+                    {reserva?.horaRetirada && (
+                      <p className="text-xs text-gray-500 mt-0.5">às {reserva.horaRetirada}</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-orange-50 text-orange-600 rounded-lg mt-0.5"><Clock size={16} /></div>
+                  <div className="p-2 bg-orange-50 text-orange-600 rounded-lg mt-0.5"><Calendar size={16} /></div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-bold tracking-wide">Devolução</p>
+                    <p className="text-sm font-medium text-gray-900">{formatDate(reserva?.dataDevolucao || reserva?.dataFim)}</p>
+                    {reserva?.horaDevolucao && (
+                      <p className="text-xs text-gray-500 mt-0.5">às {reserva.horaDevolucao}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gray-100 text-gray-500 rounded-lg mt-0.5"><Clock size={16} /></div>
                   <div>
                     <p className="text-xs text-gray-500 uppercase font-bold tracking-wide">Duração</p>
                     <p className="text-sm font-medium text-gray-900">{reserva?.duracaoDias} dias • {planLabel[reserva?.plano] || reserva?.plano}</p>
                   </div>
                 </div>
-                
-                {reserva?.franquia_km && (
-                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-green-50 text-green-600 rounded-lg mt-0.5"><MapPin size={16} /></div>
-                    <div>
-                        <p className="text-xs text-gray-500 uppercase font-bold tracking-wide">Franquia Km</p>
-                        <p className="text-sm font-medium text-gray-900">{reserva.franquia_km === 'livre' || reserva.franquia_km == 0 ? 'Km Livre' : `${reserva.franquia_km} km`}</p>
-                    </div>
-                   </div>
-                )}
-
+              
                 {/* Document Status */}
                 {doc && (
                     <div className="flex items-start gap-3 pt-3 border-t border-gray-100">

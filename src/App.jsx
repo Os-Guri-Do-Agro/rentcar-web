@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -27,10 +27,13 @@ import TermsAndRules from '@/pages/TermsAndRules';
 import Location from '@/pages/Location';
 import NotFound from '@/pages/NotFound';
 import Contato from '@/pages/Contato';
+import Blog from '@/pages/Blog';
+import BlogDetalhe from '@/pages/BlogDetalhe';
 import LocacaoCorporativa from '@/pages/LocacaoCorporativa';
 import TermosDeUso from '@/pages/TermosDeUso';
 import Privacidade from '@/pages/Privacidade';
 import NormaLGPD from '@/pages/NormaLGPD';
+import ConfirmarEmail from '@/pages/ConfirmarEmail';
 
 // Protected User Pages
 import RequestAnalysis from '@/pages/RequestAnalysis';
@@ -51,15 +54,18 @@ import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminTermsAndRules from '@/pages/admin/AdminTermsAndRules';
 import AdminEmailConfig from '@/pages/admin/AdminEmailConfig';
 import AdminUsers from '@/pages/admin/AdminUsers';
-import AdminCars from '@/pages/admin/AdminCars';
+// import AdminCars from '@/pages/admin/AdminCars';
 import AdminFleetManager from '@/pages/admin/AdminFleetManager'; 
 import AdminReservations from '@/pages/admin/AdminReservations';
 import AdminDetalhesReserva from '@/pages/admin/AdminDetalhesReserva';
 import AdminClientes from '@/pages/admin/AdminClientes';
 import AdminDetalhesCliente from '@/pages/admin/AdminDetalhesCliente';
-import AdminIntegrations from '@/pages/admin/AdminIntegrations';
+// import AdminIntegrations from '@/pages/admin/AdminIntegrations';
 import AdminLogs from '@/pages/admin/AdminLogs'; 
 import AdminCarrosDestaque from '@/pages/admin/AdminCarrosDestaque';
+import AdminBlog from '@/pages/admin/AdminBlog';
+import AdminBlogNovo from '@/pages/admin/AdminBlogNovo';
+import AdminBlogEditar from '@/pages/admin/AdminBlogEditar';
 import AdminEditarPrecosCarro from '@/pages/admin/AdminEditarPrecosCarro';
 import AdminAvaliacoes from '@/pages/admin/AdminAvaliacoes';
 import AdminSecoes from '@/pages/admin/AdminSecoes';
@@ -67,9 +73,18 @@ import AdminConteudo from '@/pages/admin/AdminConteudo';
 import AdminEmails from '@/pages/admin/AdminEmails'; 
 import DiagnosticoPage from '@/pages/DiagnosticoPage';
 import AdminCarPricing from '@/pages/admin/AdminCarPricing'; 
+import AdminWhatsAppConfig from './pages/admin/AdminWhatsAppConfig';
+// import AdminWhatsApp from '@/pages/admin/AdminWhatsApp';
+
+// Bloqueia usuários com role 'blog' de acessar rotas que não são de blog
+const AdminOnlyGuard = () => {
+  const { isBlog } = useAuth();
+  return isBlog ? <Navigate to="/admin/blog" replace /> : <Outlet />;
+};
 
 function App() {
-  const { usuario, isAdmin } = useAuth();
+  const { usuario, isAdmin, isBlog } = useAuth();
+  const { pathname } = useLocation();
   useScrollToTop();
 
   return (
@@ -99,6 +114,8 @@ function App() {
                 <Route path="/localizacao" element={<Location />} />
                 <Route path="/sobre" element={<About />} />
                 <Route path="/contato" element={<Contato />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:id" element={<BlogDetalhe />} />
                 
                 {/* Legal Pages */}
                 <Route path="/termos-de-uso" element={<TermosDeUso />} />
@@ -111,6 +128,7 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/auth/confirm" element={<ConfirmarEmail />} />
 
                 <Route path="/termos-condicoes" element={<Navigate to="/termos-regras" replace />} />
                 <Route path="/regras-gerais" element={<Navigate to="/termos-regras" replace />} />
@@ -126,47 +144,49 @@ function App() {
 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminLayout /></ProtectedRoute>}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="usuarios" element={<AdminUsers />} />
-                  <Route path="carros" element={<AdminCars />} />
-                  <Route path="frota" element={<AdminFleetManager />} />
-                  <Route path="precos-carros" element={<AdminCarPricing />} /> 
-                  <Route path="carros-destaque" element={<AdminCarrosDestaque />} />
-                  
-                  <Route path="reservas" element={<AdminReservations />} />
-                  <Route path="reserva/:reservaId" element={<AdminDetalhesReserva />} />
-                  
-                  <Route path="clientes" element={<AdminClientes />} />
-                  <Route path="cliente/:clienteId" element={<AdminDetalhesCliente />} />
+                  {/* Blog (acessível a role=blog e admin) */}
+                  <Route path="blog" element={<AdminBlog />} />
+                  <Route path="blog/novo" element={<AdminBlogNovo />} />
+                  <Route path="blog/editar/:id" element={<AdminBlogEditar />} />
 
-                  {/* CMS & Config */}
-                  <Route path="avaliacoes" element={<AdminAvaliacoes />} />
-                  <Route path="secoes" element={<AdminSecoes />} />
-                  <Route path="conteudo" element={<AdminConteudo />} />
-                  <Route path="emails" element={<AdminEmails />} />
-
-                  <Route path="integraciones" element={<AdminIntegrations />} />
-                  <Route path="logs" element={<AdminLogs />} />
-                  <Route path="email-config" element={<AdminEmailConfig />} />
-                  <Route path="diagnostico" element={<DiagnosticoPage />} />
-                  <Route path="editar-precos-carro/:carroId" element={<AdminEditarPrecosCarro />} />
-                  
-                  {/* Legacy Routes */}
-                  <Route path="fleet" element={<FleetManagement />} />
-                  <Route path="car/new" element={<CarForm />} />
-                  <Route path="car/:id" element={<CarForm />} />
-                  <Route path="prices" element={<PriceControl />} />
-                  <Route path="termos-regras" element={<AdminTermsAndRules />} />
-                  <Route path="settings" element={<AdminSettings />} />
+                  {/* Admin only — role=blog é redirecionado para /admin/blog */}
+                  <Route element={<AdminOnlyGuard />}>
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="usuarios" element={<AdminUsers />} />
+                    {/* <Route path="carros" element={<AdminCars />} /> */}
+                    <Route path="frota" element={<AdminFleetManager />} />
+                    <Route path="precos-carros" element={<AdminCarPricing />} />
+                    <Route path="carros-destaque" element={<AdminCarrosDestaque />} />
+                    <Route path="whatsapp-config" element={<AdminWhatsAppConfig />} /> 
+                    {/* <Route path="whatsapp" element={<AdminWhatsApp />} /> */}
+                    <Route path="reservas" element={<AdminReservations />} />
+                    <Route path="reserva/:reservaId" element={<AdminDetalhesReserva />} />
+                    <Route path="clientes" element={<AdminClientes />} />
+                    <Route path="cliente/:clienteId" element={<AdminDetalhesCliente />} />
+                    <Route path="avaliacoes" element={<AdminAvaliacoes />} />
+                    <Route path="secoes" element={<AdminSecoes />} />
+                    <Route path="conteudo" element={<AdminConteudo />} />
+                    <Route path="emails" element={<AdminEmails />} />
+                    <Route path="logs" element={<AdminLogs />} />
+                    <Route path="email-config" element={<AdminEmailConfig />} />
+                    <Route path="diagnostico" element={<DiagnosticoPage />} />
+                    <Route path="editar-precos-carro/:carroId" element={<AdminEditarPrecosCarro />} />
+                    <Route path="fleet" element={<FleetManagement />} />
+                    <Route path="car/new" element={<CarForm />} />
+                    <Route path="car/:id" element={<CarForm />} />
+                    <Route path="prices" element={<PriceControl />} />
+                    <Route path="termos-regras" element={<AdminTermsAndRules />} />
+                    <Route path="settings" element={<AdminSettings />} />
+                  </Route>
                 </Route>
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
 
-            {!isAdmin && <Footer />}
-            <FloatingWhatsApp />
-            <CookieBanner />
+            {!pathname.startsWith('/admin') && <Footer />}
+            {!pathname.startsWith('/admin') && <FloatingWhatsApp />}
+            {!pathname.startsWith('/admin') && <CookieBanner />}
             <Toaster />
           </div>
         </AdminModeProvider>

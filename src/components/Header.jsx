@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogOut, User, Shield, Calendar } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import userService from '@/services/user/userService';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated, usuario, logout, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, isBlog } = useAuth();
+  const [user, setUser] = useState(null)
 
   const isActive = (path) => location.pathname === path ? 'text-[#00D166]' : 'text-white hover:text-[#00D166]';
   const closeMenu = () => setIsMenuOpen(false);
+
+  useEffect(() => {
+    if (isAuthenticated) infoUser();
+  }, [isAuthenticated])
+
+  const infoUser = async () => {
+    try {
+      const r = await userService.getUsersMe()
+      setUser(r.data)
+      console.log(r)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const logout = () => {
+    localStorage.removeItem('token')
+    window.location.href = '/'
+  }
 
   console.log("Header rendering, current path:", location.pathname);
 
@@ -32,16 +53,16 @@ const Header = () => {
             <Link to="/locacao-particular" className={isActive('/locacao-particular')}>Info Particular</Link>
             <Link to="/termos-regras" className={isActive('/termos-regras')}>Termos</Link>
             <Link to="/sobre" className={isActive('/sobre')}>Sobre</Link>
-            <Link to="/contato" className={isActive('/contato')}>Contato</Link>
+            <Link to="/blog" className={isActive('/blog')}>Blog</Link>
           </nav>
 
           <div className="hidden lg:flex items-center gap-4">
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
                 
-                {isAdmin && (
+                {(isAdmin || isBlog) && (
                   <Link 
-                    to="/admin" 
+                  to={isBlog ? "/admin/blog" : "/admin"}
                     className="flex items-center gap-2 px-3 py-1.5 bg-purple-600/20 text-purple-300 rounded-lg hover:bg-purple-600/30 transition-colors border border-purple-500/30"
                   >
                     <Shield size={16} /> <span className="text-xs font-bold uppercase">Painel Admin</span>
@@ -59,13 +80,13 @@ const Header = () => {
 
                 <Link to="/user" className="flex items-center gap-2 text-sm hover:text-[#00D166] transition-colors group">
                   <div className="w-8 h-8 rounded-full bg-[#00D166]/20 flex items-center justify-center text-[#00D166] group-hover:bg-[#00D166] group-hover:text-[#0E3A2F] transition-all overflow-hidden">
-                    {usuario?.foto_perfil_url ? (
-                       <img src={usuario.foto_perfil_url} alt="User" className="w-full h-full object-cover" />
+                    {user?.user_avatars ? (
+                       <img src={user.user_avatars} alt="User" className="w-full h-full object-cover" />
                     ) : (
                        <User size={16} />
                     )}
                   </div>
-                  <span className="font-semibold">{usuario?.nome?.split(' ')[0]}</span>
+                  <span className="font-semibold">{user?.nome?.split(' ')[0]}</span>
                 </Link>
                 
                 <button 
@@ -99,7 +120,7 @@ const Header = () => {
             <Link to="/locacao-particular" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Info Particular</Link>
             <Link to="/termos-regras" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Termos</Link>
             <Link to="/sobre" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Sobre</Link>
-            <Link to="/contato" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Contato</Link>
+            <Link to="/blog" className="block py-2 px-4 hover:bg-white/5" onClick={closeMenu}>Blog</Link>
             <Link to="/privacidade" className="block py-2 px-4 hover:bg-white/5 text-sm text-gray-400" onClick={closeMenu}>Política de Privacidade</Link>
             <Link to="/termos-de-uso" className="block py-2 px-4 hover:bg-white/5 text-sm text-gray-400" onClick={closeMenu}>Termos de Uso</Link>
             
@@ -108,20 +129,20 @@ const Header = () => {
                 <>
                   <div className="flex items-center gap-3 mb-4 px-2">
                      <div className="w-10 h-10 rounded-full bg-[#00D166]/20 flex items-center justify-center text-[#00D166] overflow-hidden">
-                        {usuario?.foto_perfil_url ? (
-                           <img src={usuario.foto_perfil_url} alt="User" className="w-full h-full object-cover" />
+                        {user?.user_avatars ? (
+                           <img src={user.user_avatars} alt="User" className="w-full h-full object-cover" />
                         ) : (
                            <User size={20} />
                         )}
                      </div>
                      <div>
-                       <p className="font-bold">{usuario?.nome}</p>
-                       <p className="text-xs text-gray-400">{usuario?.email}</p>
+                       <p className="font-bold">{user?.nome}</p>
+                       <p className="text-xs text-gray-400">{user?.email}</p>
                      </div>
                   </div>
                   
-                  {isAdmin && (
-                    <Link to="/admin" className="flex items-center gap-2 w-full py-3 px-2 text-purple-300 hover:bg-purple-900/20 rounded-lg mb-2" onClick={closeMenu}>
+                  {(isAdmin || isBlog) && (
+                    <Link to={isBlog ? "/admin/blog" : "/admin"} className="flex items-center gap-2 w-full py-3 px-2 text-purple-300 hover:bg-purple-900/20 rounded-lg mb-2" onClick={closeMenu}>
                        <Shield size={18} /> Painel Administrativo
                     </Link>
                   )}

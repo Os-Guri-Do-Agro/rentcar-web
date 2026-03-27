@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Phone, Mail, MapPin, Instagram, Facebook, Linkedin, MessageCircle, Map } from 'lucide-react';
+import mapImage from '@/assets/footer/map.jpg';
 import { Link } from 'react-router-dom';
-import { 
-  getWhatsAppNumber, 
-  getEmailSuporte, 
-  getTelefoneSuporte, 
+import {
+  getWhatsAppNumber,
+  getEmailSuporte,
+  getTelefoneSuporte,
   getEnderecoEmpresa,
   getInstagram,
   getFacebook,
-  getMapsUrl
 } from '@/services/configService';
-import { 
-    abrirInstagram, 
-    abrirFacebook, 
-    abrirWhatsApp, 
-    abrirEmail, 
-    abrirTelefone, 
-    abrirMaps 
+
+const MAPS_URL = 'https://www.google.com/maps/place/R.+Fernando+Falc%C3%A3o,+54+-+Vila+Claudia,+S%C3%A3o+Paulo+-+SP,+03180-000/@-23.5543629,-46.5866693,1047m/data=!3m2!1e3!4b1!4m6!3m5!1s0x94ce5eb753b95707:0xe35150227a076d1b!8m2!3d-23.5543629!4d-46.5840944!16s%2Fg%2F11nnkr2gg3?entry=ttu&g_ep=EgoyMDI2MDMxOC4xIKXMDSoASAFQAw%3D%3D'
+import {
+    abrirInstagram,
+    abrirFacebook,
+    abrirWhatsApp,
+    abrirEmail,
+    abrirTelefone,
+    abrirMaps,
 } from '@/utils/linkUtils';
 
 const Footer = () => {
@@ -28,22 +30,19 @@ const Footer = () => {
     endereco: '',
     instagram: '',
     facebook: '',
-    maps_url: ''
   });
 
   useEffect(() => {
     const loadConfigs = async () => {
-        console.log("[Footer] Loading configurations...");
-        const [whatsapp, email, telefone, endereco, instagram, facebook, maps_url] = await Promise.all([
+        const [whatsapp, email, telefone, endereco, instagram, facebook] = await Promise.all([
             getWhatsAppNumber(),
             getEmailSuporte(),
             getTelefoneSuporte(),
             getEnderecoEmpresa(),
             getInstagram(),
             getFacebook(),
-            getMapsUrl()
         ]);
-        
+
         setConfig({
             whatsapp: whatsapp || '',
             email: email || '',
@@ -51,14 +50,13 @@ const Footer = () => {
             endereco: endereco || '',
             instagram: instagram || '',
             facebook: facebook || '',
-            maps_url: maps_url || ''
         });
     };
     loadConfigs();
   }, []);
 
   return (
-    <footer className="bg-[#0E3A2F] text-white pt-20 pb-8 border-t border-white/5">
+    <footer className="bg-[#0E3A2F] text-white pt-20 pb-8">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           
@@ -116,7 +114,7 @@ const Footer = () => {
                     </div>
                     <span className="group-hover:text-white transition-colors">WhatsApp</span>
               </li>
-              <li className="flex items-start gap-3 group cursor-pointer" onClick={() => abrirMaps(config.maps_url)}>
+              <li className="flex items-start gap-3 group cursor-pointer" onClick={() => abrirMaps(MAPS_URL)}>
                  <div className="w-8 h-8 rounded-full bg-[#00D166]/10 flex items-center justify-center text-[#00D166] group-hover:bg-[#00D166] group-hover:text-[#0E3A2F] transition-all mt-1">
                     <MapPin size={16} />
                  </div>
@@ -128,18 +126,17 @@ const Footer = () => {
           {/* Map Column */}
           <div>
             <h3 className="text-lg font-bold mb-6 text-white">Onde Estamos</h3>
-            <div className="rounded-xl overflow-hidden h-40 border border-gray-700 shadow-lg group cursor-pointer" onClick={() => abrirMaps(config.maps_url)}>
-               <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.436376594248!2d-46.588075623812745!3d-23.55278746127471!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce5ec0192e4e11%3A0x6e9a6565158a1309!2sR.%20Fernando%20Falc%C3%A3o%2C%2054%20-%20Mooca%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2003180-000!5e0!3m2!1spt-BR!2sbr!4v1703200000000!5m2!1spt-BR!2sbr"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0, pointerEvents: 'none' }} 
-                  allowFullScreen=""
-                  loading="lazy"
-                  className="group-hover:scale-110 transition-transform duration-700"
-               ></iframe>
+            <div className="rounded-xl overflow-hidden h-40 border border-gray-700 shadow-lg group cursor-pointer relative" onClick={() => abrirMaps(MAPS_URL)}>
+              <img
+                src={mapImage}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                alt="Localização JL Rent a Car"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
+                <MapPin size={32} className="text-white" />
+              </div>
             </div>
-            <p className="text-xs text-center mt-2 text-gray-500 hover:text-[#00D166]" onClick={() => abrirMaps(config.maps_url)}>Clique para abrir no mapa</p>
+            <p className="text-xs text-center mt-2 text-gray-500 hover:text-[#00D166] cursor-pointer" onClick={() => abrirMaps(MAPS_URL)}>Clique para abrir no mapa</p>
           </div>
         </div>
 

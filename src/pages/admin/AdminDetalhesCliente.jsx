@@ -14,12 +14,9 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, 
     DialogDescription, DialogFooter 
 } from "@/components/ui/dialog";
-import { 
-    getClienteAvaliacao, 
-    updateClienteAvaliacao, 
-    getClienteAvaliacaoHistorico,
-    getClienteReservas 
-} from '@/services/clienteAvaliacaoService';
+import userService from '@/services/user/userService';
+import clientesService from '@/services/avaliacoes/clientes/clientes-service';
+import reservasServices from '@/services/reservas/reservas-services';
 
 const AdminDetalhesCliente = () => {
     const { clienteId } = useParams();
@@ -29,7 +26,7 @@ const AdminDetalhesCliente = () => {
 
     const [cliente, setCliente] = useState(null);
     const [avaliacao, setAvaliacao] = useState(null);
-    const [historicoAvaliacao, setHistoricoAvaliacao] = useState([]);
+    const [historicoAvaliacao] = useState([]);
     const [reservas, setReservas] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -40,38 +37,35 @@ const AdminDetalhesCliente = () => {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
+        infoClient();
         fetchData();
     }, [clienteId]);
 
+    const infoClient = async () => {
+        try {
+            const res = await userService.getUserById(clienteId);
+            setCliente(res.data);
+        } catch (err) {
+            console.error("Erro ao buscar cliente:", err);
+            toast({ title: "Erro", description: "Não foi possível carregar o cliente.", variant: "destructive" });
+        }
+    }
+
     const fetchData = async () => {
         setLoading(true);
-        console.log(`[AdminDetalhesCliente] Buscando detalhes cliente ${clienteId}`);
 
         try {
-            const { data: clientData, error } = await supabase.from('users').select('*').eq('id', clienteId).single();
-            if(error) throw error;
-            setCliente(clientData);
 
-            const av = await getClienteAvaliacao(clienteId);
+            const avRes = await clientesService.getClientesAvaliacao(clienteId);
+            const av = avRes?.data || null;
             setAvaliacao(av);
             if (av) {
                 setEditNota(av.nota);
                 setEditNotasPessoais(av.notas_pessoais || '');
             }
 
-            const hist = await getClienteAvaliacaoHistorico(clienteId);
-            setHistoricoAvaliacao(hist);
-
-            const res = await getClienteReservas(clienteId);
-            setReservas(res);
-            
-            // Debug logs for dates and docs
-            if (res && res.length > 0) {
-                res.forEach(r => {
-                    console.log(`[DATAS] Reserva ${r.id.slice(0,6)} - data_retirada: ${r.data_retirada}, data_devolucao: ${r.data_devolucao}`);
-                    console.log(`[DOCS] Reserva ${r.id.slice(0,6)} - Documentos: ${r.reserva_documentos?.length || 0}`);
-                });
-            }
+const reservasRes = await reservasServices.getReservvasByUserId(clienteId);
+            setReservas(reservasRes?.data ?? []);
 
         } catch (error) {
             console.error("Erro ao buscar dados do cliente:", error);
@@ -83,58 +77,33 @@ const AdminDetalhesCliente = () => {
 
     const handleSaveAvaliacao = async () => {
         setSaving(true);
-        console.log("Salvando avaliação...");
-        const result = await updateClienteAvaliacao(clienteId, editNota, editNotasPessoais, usuario.id);
-        
-        if (result.success) {
+        try {
+            const payload = { nota: editNota, notasPessoais: editNotasPessoais };
+            if (avaliacao) {
+                await clientesService.patchClientesAvaliacao(clienteId, avaliacao.id, payload);
+            } else {
+                await clientesService.postClientesAvaliacao(clienteId, payload);
+            }
             toast({ title: "Avaliação salva!", className: "bg-green-600 text-white" });
             setEditModalOpen(false);
-            fetchData(); // Refresh
-        } else {
-            toast({ title: "Erro", description: result.error, variant: "destructive" });
+            fetchData();
+        } catch (error) {
+            toast({ title: "Erro", description: error.message, variant: "destructive" });
+        } finally {
+            setSaving(false);
         }
-        setSaving(false);
     };
 
-    const getStatusBadge = (reserva) => {
-        const hasDocs = reserva.reserva_documentos && reserva.reserva_documentos.length > 0;
-        const status = reserva.status;
-
-        console.log(`[STATUS] Reserva ${reserva.id.slice(0,6)}: ${status}, documentos: ${reserva.reserva_documentos?.length || 0}`);
-
-        if (status === 'cancelada') {
-            return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
-                    <XCircle size={12} /> Cancelada
-                </span>
-            );
-        }
-        if (status === 'confirmada') {
-            return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
-                    <CheckCircle size={12} /> Confirmada
-                </span>
-            );
-        }
-        
-        // Custom logic for documents
-        if (hasDocs) {
-            return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
-                    <FileCheck size={12} /> Documentos Entregues
-                </span>
-            );
-        }
-
-        if (status === 'aguardando_documentos' || status === 'pendente') {
-            return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                    <Clock size={12} /> Aguardando Docs
-                </span>
-            );
-        }
-
-        return (
+    const getStatusBadge = (status) => {
+        const map = {
+            cancelada:            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200"><XCircle size={12} /> Cancelada</span>,
+            confirmada:           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200"><CheckCircle size={12} /> Confirmada</span>,
+            ativa:                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200"><CheckCircle size={12} /> Ativa</span>,
+            aguardando_documentos:<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200"><Clock size={12} /> Aguardando Docs</span>,
+            pendente:             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200"><Clock size={12} /> Pendente</span>,
+            concluida:            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200"><FileCheck size={12} /> Concluída</span>,
+        };
+        return map[status] ?? (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">
                 <AlertTriangle size={12} /> {status}
             </span>
@@ -293,14 +262,12 @@ const AdminDetalhesCliente = () => {
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Veículo</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Período</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Valor</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-center">Docs</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Status</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">Ação</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {reservas.map(res => {
-                                        const docCount = res.reserva_documentos?.length || 0;
                                         return (
                                             <tr key={res.id} className="hover:bg-gray-50 transition-colors group">
                                                 <td className="px-6 py-4">
@@ -320,14 +287,8 @@ const AdminDetalhesCliente = () => {
                                                 <td className="px-6 py-4 font-bold text-[#00D166] whitespace-nowrap">
                                                     R$ {parseFloat(res.valor_total).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                                                 </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold ${docCount > 0 ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                                                        <FileText size={12} />
-                                                        {docCount}
-                                                    </div>
-                                                </td>
                                                 <td className="px-6 py-4">
-                                                    {getStatusBadge(res)}
+                                                    {getStatusBadge(res.status)}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <button 

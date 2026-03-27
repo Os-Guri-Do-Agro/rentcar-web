@@ -32,9 +32,9 @@ const CookieBanner = () => {
               <p>Utilizamos cookies para melhorar sua experiência em nosso site. Ao continuar navegando, você concorda com nossa Política de Privacidade.</p>
             </div>
             <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsVisible(false)} // Just closes, doesn't save preference
+              <Button
+                variant="outline"
+                onClick={() => { localStorage.setItem('cookie-consent', 'declined'); setIsVisible(false); }}
                 className="text-gray-600"
               >
                 Recusar

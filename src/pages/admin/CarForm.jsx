@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Loader2, Upload, ArrowLeft, Image as ImageIcon, Link as LinkIcon, Trash2, CheckSquare, User, Briefcase, Building2, Plus, X, CheckCircle2, AlertCircle, Settings } from 'lucide-react';
-import { fetchCarById, createCar, updateCar } from '@/services/carService';
-import { uploadImage, deleteImage } from '@/services/imageService';
+import { Loader2, Upload, ArrowLeft, Image as ImageIcon, CheckSquare, User, Briefcase, Building2, CheckCircle2, AlertCircle, Settings } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import BrandSelector from '@/components/BrandSelector';
+import carService from '@/services/cars/carService';
 
 const SPECIFICATIONS_LIST = [
   "Multimídia com fio", "Ar-condicionado", "Ar-condicionado digital", "Multimídia sem fio",
@@ -29,10 +28,8 @@ const CarForm = () => {
   const isEditMode = !!id;
   
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
-  const [uploadMode, setUploadMode] = useState('upload'); // 'upload' or 'link'
-  const [currentImagePath, setCurrentImagePath] = useState(null);
   const [rentalTypeError, setRentalTypeError] = useState(false);
   
   // Rental Types State
@@ -51,7 +48,6 @@ const CarForm = () => {
   const [isAddingPlan, setIsAddingPlan] = useState(false);
   
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm();
-  const watchedImageUrl = watch('imagem_url');
   const watchedMarca = watch('marca');
 
   useEffect(() => {
@@ -69,36 +65,23 @@ const CarForm = () => {
     if (isEditMode) {
       const loadCar = async () => {
         try {
-          const data = await fetchCarById(id);
-          reset(data);
-          setPreviewImage(data.imagem_url);
-          setCurrentImagePath(data.imagem_nome);
-          if (data.imagem_url && !data.imagem_nome) setUploadMode('link');
+          const data = await carService.getCarById(id);
+          reset(data.data);
+          setPreviewImage(data.data.imagem_url || data.data.foto_principal);
           
           // Parse rental types
-          if (data.tipos_aluguel) {
-            const types = data.tipos_aluguel.split(',');
-            setRentalTypes({
-              particular: types.includes('particular'),
-              motorista: types.includes('motorista'),
-              corporativo: types.includes('corporativo')
-            });
-          } else {
-             setRentalTypes({
-               particular: data.disponivel_particular || false,
-               motorista: data.disponivel_motorista || false,
-               corporativo: false
-             });
+          setRentalTypes({
+            particular: data.data.disponivel_particular || false,
+            motorista: data.data.disponivel_motorista || false,
+            corporativo: data.data.disponivel_corporativo || false
+          });
+
+          if (data.data.planos_km && Array.isArray(data.data.planos_km)) {
+              setKmPlans(data.data.planos_km);
           }
 
-          // Load km plans
-          if (data.planos_km && Array.isArray(data.planos_km)) {
-              setKmPlans(data.planos_km);
-          }
-
-          // Load specs
-          if (data.especificacoes && Array.isArray(data.especificacoes)) {
-              setSpecs(data.especificacoes);
+          if (data.data.especificacoes && Array.isArray(data.data.especificacoes)) {
+              setSpecs(data.data.especificacoes);
           }
 
         } catch (error) {
@@ -110,50 +93,9 @@ const CarForm = () => {
   }, [id, isEditMode, reset, toast]);
 
   useEffect(() => {
-    if (uploadMode === 'link' && watchedImageUrl) {
-      setPreviewImage(watchedImageUrl);
-    }
-  }, [watchedImageUrl, uploadMode]);
-
-  useEffect(() => {
     const hasSelection = Object.values(rentalTypes).some(Boolean);
     if (hasSelection) setRentalTypeError(false);
   }, [rentalTypes]);
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!isAdmin) {
-        toast({ title: "Acesso negado", description: "Apenas administradores podem fazer upload de fotos", variant: "destructive" });
-        return;
-    }
-
-    try {
-      setUploading(true);
-      if (currentImagePath) await deleteImage('cars', currentImagePath); // Updated bucket name based on context
-      const result = await uploadImage(file, 'cars', 'frota', 'car');
-      setPreviewImage(result.url);
-      setCurrentImagePath(result.path);
-      setValue('imagem_url', result.url);
-      setValue('imagem_nome', result.path);
-      toast({ title: "Imagem enviada!", className: "bg-green-600 text-white" });
-    } catch (error) {
-      toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleRemoveImage = async () => {
-      if (currentImagePath) {
-          try { await deleteImage('cars', currentImagePath); } catch (e) { }
-      }
-      setPreviewImage(null);
-      setCurrentImagePath(null);
-      setValue('imagem_url', '');
-      setValue('imagem_nome', null);
-  };
 
   const toggleRentalType = (type) => {
     setRentalTypes(prev => ({ ...prev, [type]: !prev[type] }));
@@ -165,6 +107,31 @@ const CarForm = () => {
 
   const handleBrandChange = (value) => {
     setValue('marca', value, { shouldValidate: true, shouldDirty: true });
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setUploadingImage(true);
+    try {
+      const res = await carService.postCarPhoto(formData);
+      const url = res.data.url;
+      setPreviewImage(url);
+      setValue('imagem_url', url);
+
+      if (isEditMode) {
+        await carService.patchCarById(id, { imagem_url: url, foto_principal: url });
+        toast({ title: 'Foto atualizada com sucesso!', className: 'bg-green-600 text-white border-none' });
+      }
+    } catch {
+      toast({ title: 'Erro ao enviar imagem', variant: 'destructive' });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const onSubmit = async (data) => {
@@ -187,22 +154,37 @@ const CarForm = () => {
     const tiposAluguelStr = selectedTypes.join(',');
     
     const payload = {
-      ...data,
+      nome: data.nome,
+      categoria: data.categoria,
+      marca: data.marca,
+      placa: data.placa,
+      descricao: data.descricao,
+      disponivel: true,
+      imagem_url: data.imagem_url || previewImage || data.foto_principal,
+      foto_principal: data.imagem_url || previewImage || data.foto_principal || null,
+      tipos_aluguel: tiposAluguelStr,
+      para_particular: rentalTypes.particular,
+      tipo_locacao: tiposAluguelStr,
       disponivel_particular: rentalTypes.particular,
       disponivel_motorista: rentalTypes.motorista,
-      tipos_aluguel: tiposAluguelStr,
-      planos_km: rentalTypes.motorista ? kmPlans : [], 
-      especificacoes: specs, // JSON array
-      disponivel: true
+      disponivel_corporativo: rentalTypes.corporativo,
+      especificacoes: specs,
+      ano: data.ano ? parseInt(data.ano) : null,
+      combustivel: data.combustivel,
+      cambio: data.cambio,
+      passageiros: data.passageiros ? parseInt(data.passageiros) : null,
+      malas: data.malas ? parseInt(data.malas) : null,
+      cor: data.cor,
     };
 
+    console.log('payload enviado:', JSON.stringify(payload, null, 2));
     try {
       if (isEditMode) {
-        await updateCar(id, payload);
-        toast({ title: "Veículo atualizado com sucesso!" });
+        await carService.patchCarById(id, payload);
+        toast({ title: "Veículo atualizado com sucesso!", className: "bg-green-600 text-white border-none" });
       } else {
-        await createCar(payload);
-        toast({ title: "Veículo criado com sucesso!" });
+        await carService.postCars(payload);
+        toast({ title: "Veículo criado com sucesso!", className: "bg-green-600 text-white border-none" });
       }
       navigate('/admin/frota');
     } catch (error) {
@@ -234,41 +216,30 @@ const CarForm = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           
-          {/* Image Upload Section */}
+          {/* Image Section */}
           <div className="space-y-4 border-b pb-8">
             <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                 <ImageIcon className="text-[#00D166]" size={20} /> Imagem do Carro
             </h3>
-            {/* Same image upload UI code from previous version... simplified for brevity, assume included */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                 <div className="space-y-3">
-                    <div className="flex gap-4 mb-2">
-                        <button type="button" onClick={() => setUploadMode('upload')} className={`text-xs font-bold px-3 py-1 rounded transition-colors ${uploadMode==='upload' ? 'bg-[#0E3A2F] text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Upload</button>
-                        <button type="button" onClick={() => setUploadMode('link')} className={`text-xs font-bold px-3 py-1 rounded transition-colors ${uploadMode==='link' ? 'bg-[#0E3A2F] text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Link</button>
-                    </div>
-                    {uploadMode === 'upload' ? (
-                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center relative cursor-pointer min-h-[150px] flex items-center justify-center hover:bg-gray-50 transition-colors">
-                            {uploading ? <Loader2 className="animate-spin text-[#00D166]"/> : (
-                                <div className="text-gray-400 flex flex-col items-center">
-                                    <Upload size={32} />
-                                    <span className="text-xs mt-2 font-medium">Clique para selecionar</span>
-                                </div>
-                            )}
-                            <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="absolute inset-0 opacity-0 cursor-pointer"/>
-                        </div>
-                    ) : (
-                        <input {...register('imagem_url')} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none" placeholder="https://..." />
-                    )}
-                    <input type="hidden" {...register('imagem_nome')} />
-                 </div>
-                 <div className="relative bg-gray-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center border border-gray-200 shadow-inner">
-                    {previewImage ? (
-                        <>
-                            <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
-                            <button type="button" onClick={handleRemoveImage} className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full shadow-md hover:bg-red-700 transition-colors"><Trash2 size={16}/></button>
-                        </>
-                    ) : <ImageIcon className="opacity-20" size={40}/>}
-                 </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">URL da Imagem</label>
+                  <input {...register('imagem_url')} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none" placeholder="https://..." onChange={e => setPreviewImage(e.target.value)} />
+                </div>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center relative cursor-pointer min-h-[120px] flex items-center justify-center hover:bg-gray-50 transition-colors">
+                  <div className="text-gray-400 flex flex-col items-center">
+                    {uploadingImage ? <Loader2 size={28} className="animate-spin" /> : <Upload size={28} />}
+                    <span className="text-xs mt-2 font-medium">{uploadingImage ? 'Enviando...' : 'Ou envie um arquivo'}</span>
+                  </div>
+                  <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={uploadingImage} />
+                </div>
+              </div>
+              <div className="relative bg-gray-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center border border-gray-200 shadow-inner">
+                {previewImage ? (
+                  <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                ) : <ImageIcon className="opacity-20" size={40}/>}
+              </div>
             </div>
           </div>
 
@@ -335,7 +306,7 @@ const CarForm = () => {
                 <label className="block text-sm font-bold text-gray-700 mb-1">Ano</label>
                 <input type="number" {...register('ano')} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none"/>
             </div>
-             <div>
+            <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Categoria</label>
                 <select {...register('categoria')} className="w-full p-3 border rounded-lg bg-white">
                     <option value="Econômico">Econômico</option>
@@ -343,6 +314,43 @@ const CarForm = () => {
                     <option value="SUV">SUV</option>
                     <option value="Premium">Premium</option>
                 </select>
+            </div>
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Cor</label>
+                <input {...register('cor')} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none" placeholder="Ex: Prata"/>
+            </div>
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Combustível</label>
+                <select {...register('combustivel')} className="w-full p-3 border rounded-lg bg-white">
+                    <option value="">Selecione</option>
+                    <option value="Flex">Flex</option>
+                    <option value="Gasolina">Gasolina</option>
+                    <option value="Etanol">Etanol</option>
+                    <option value="Diesel">Diesel</option>
+                    <option value="Elétrico">Elétrico</option>
+                    <option value="Híbrido">Híbrido</option>
+                </select>
+            </div>
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Câmbio</label>
+                <select {...register('cambio')} className="w-full p-3 border rounded-lg bg-white">
+                    <option value="">Selecione</option>
+                    <option value="Manual">Manual</option>
+                    <option value="Automático">Automático</option>
+                    <option value="CVT">CVT</option>
+                </select>
+            </div>
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Passageiros</label>
+                <input type="number" {...register('passageiros')} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none" placeholder="5"/>
+            </div>
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Malas</label>
+                <input type="number" {...register('malas')} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none" placeholder="2"/>
+            </div>
+            <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-1">Descrição</label>
+                <textarea {...register('descricao')} rows={3} className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#00D166] outline-none resize-none"/>
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchAllCars } from '@/services/carService';
+import carService from '@/services/cars/carService';
 
 export const useCars = (filters = {}) => {
   const [cars, setCars] = useState([]);
@@ -13,11 +13,11 @@ export const useCars = (filters = {}) => {
       try {
         setLoading(true);
         // Cached request handled by service layer now
-        const data = await fetchAllCars();
-        
+        const res = await carService.getCars('false', '');
+
         if (!isMounted) return;
 
-        let filteredCars = data || [];
+        let filteredCars = res?.data ?? res ?? [];
 
         // Client-side filtering
         if (filters.categoria) {

@@ -1,21 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
-import { ArrowLeft, ShieldCheck, AlertTriangle, UploadCloud } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, ShieldCheck, UploadCloud, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useReserva } from '@/context/ReservaContext';
 import { useToast } from '@/components/ui/use-toast';
 
 // Services
-import { sendReservationEmailToRental, sendConfirmationEmailToUser } from '@/services/emailService';
-import { 
-    uploadDocumento,
-    salvarTodosDocumentos
-} from '@/services/documentoService';
-import { createReserva, updateReservaStatus } from '@/services/reservaService';
-import { carregarDadosUsuario, salvarDadosUsuario } from '@/services/usuarioService';
-import { getEmailSuporte } from '@/services/configService';
+import reservasService from '@/services/reservas/reservas-services';
+import userService from '@/services/user/userService';
+import { validatePDFFile } from '@/lib/validationUtils';
+
+// Mapeia chave interna → tipo aceito pela API
+const DOC_TYPE_MAP = {
+  comprovante_trabalho: 'comprovante_trabalho_plataforma',
+};
 
 // Components
 import ProgressBar from '@/components/ProgressBar';
@@ -24,6 +24,27 @@ import ResumoPrecoCard from '@/components/ResumoPrecoCard';
 import DadosPessoaisSection from '@/components/DadosPessoaisSection';
 import { DocumentDropzone } from '@/components/DocumentComponents';
 import TermosModal from '@/components/TermosModal';
+
+const DOCS_CONFIG = {
+  particular: [
+    { key: 'cnh',                   label: 'CNH (Completa)' },
+    { key: 'comprovante_residencia', label: 'Comprovante de Residência' },
+    { key: 'rg',                    label: 'RG (Frente e Verso)' },
+  ],
+  motorista: [
+    { key: 'historico_criminal',    label: 'Histórico Criminal' },
+    { key: 'cnh',                   label: 'CNH (com EAR)' },
+    { key: 'comprovante_residencia', label: 'Comprovante de Residência' },
+    { key: 'comprovante_trabalho',  label: 'Comprovante de Trabalho na Plataforma' },
+  ],
+  corporativo: [
+    { key: 'cnpj',                  label: 'CNPJ' },
+    { key: 'comprovante_residencia', label: 'Comprovante de Residência' },
+    { key: 'cnh_responsavel',       label: 'CNH do Responsável' },
+  ],
+};
+
+const ALL_DOC_KEYS = [...new Set(Object.values(DOCS_CONFIG).flat().map(d => d.key))];
 
 const Documentos = () => {
   const { carroId } = useParams();
@@ -41,25 +62,18 @@ const Documentos = () => {
   const [formData, setFormData] = useState({
       nome: '', email: '', telefone: '', cpf: '', cnh: '', data_nascimento: '',
       endereco_rua: '', endereco_numero: '', endereco_complemento: '',
-      endereco_cidade: '', endereco_estado: '', endereco_cep: ''
+      endereco_cidade: '', endereco_estado: '', endereco_cep: '', aceitou_termos: false
   });
   const [formErrors, setFormErrors] = useState({});
   const [formTouched, setFormTouched] = useState({});
   
   // Files State Management
-  const [filesData, setFilesData] = useState({
-      cnh: { file: null, status: 'idle', error: null },
-      cpf: { file: null, status: 'idle', error: null },
-      rg: { file: null, status: 'idle', error: null },
-      comprovante_residencia: { file: null, status: 'idle', error: null },
-      historico_criminal: { file: null, status: 'idle', error: null }
-  });
+  const [filesData, setFilesData] = useState(
+    () => Object.fromEntries(ALL_DOC_KEYS.map(k => [k, { file: null, status: 'idle', error: null }]))
+  );
 
   const [termosOpen, setTermosOpen] = useState(false);
-  const [createdReservaId, setCreatedReservaId] = useState(null);
-  const [globalError, setGlobalError] = useState(null);
 
-  // --- 1. Initialization ---
   useEffect(() => {
     let dados = null;
     if (location.state?.reserva) {
@@ -74,20 +88,40 @@ const Documentos = () => {
     }
 
     if (!dados?.reserva?.valorTotal) {
-         toast({ title: "Erro de Dados", description: "Dados da reserva incompletos. Redirecionando...", variant: "destructive" });
+         toast({ title: "Erro de Dados", description: "Dados da reserva incompletos. Redirecionando...", variant: "destructive", className: "bg-white text-gray-900" });
          navigate('/frota');
          return;
     }
 
     setContextData(dados);
 
-    if (usuario?.id) {
-        carregarDadosUsuario(usuario.id).then(userData => {
-            if (userData) {
-                setFormData(prev => ({ ...prev, ...userData }));
-            }
+    const token = localStorage.getItem('token');
+    if (token) {
+        userService.getUsersMe().then(res => {
+            const data = res?.data ?? res;
+            setFormData(prev => ({
+                ...prev,
+                nome: data.nome || '',
+                email: data.email || '',
+                telefone: data.telefone || '',
+                cpf: data.cpf || '',
+                cnh: data.cnh || '',
+                data_nascimento: data.data_nascimento?.split('T')[0] || '',
+                endereco_rua: data.endereco_rua || '',
+                endereco_numero: data.endereco_numero || '',
+                endereco_complemento: data.endereco_complemento || '',
+                endereco_cidade: data.endereco_cidade || '',
+                endereco_estado: data.endereco_estado || '',
+                endereco_cep: data.endereco_cep || '',
+                aceitou_termos: data.aceitou_termos
+            }));
+        }).catch(() => {}).finally(() => setLoading(false));
+    } else if (usuario?.id) {
+        userService.getUserById(usuario.id).then(res => {
+            const userData = res?.data ?? res;
+            if (userData) setFormData(prev => ({ ...prev, ...userData }));
             setLoading(false);
-        });
+        }).catch(() => setLoading(false));
     } else {
         setLoading(false);
     }
@@ -96,12 +130,16 @@ const Documentos = () => {
   // --- 2. Handlers ---
 
   const handleFileSelect = (file, type) => {
-    if (file) {
-        setFilesData(prev => ({
-            ...prev,
-            [type]: { file: file, status: 'idle', error: null }
-        }));
+    if (!file) return;
+    const validation = type === 'comprovante_trabalho' ? { valid: true } : validatePDFFile(file);
+    if (!validation.valid) {
+      toast({ title: 'Arquivo inválido', description: validation.error, variant: 'destructive', className: 'bg-white text-gray-900' });
+      return;
     }
+    setFilesData(prev => ({
+      ...prev,
+      [type]: { file, status: 'idle', error: null }
+    }));
   };
 
   const validateAllFields = () => {
@@ -130,22 +168,24 @@ const Documentos = () => {
       }
 
       if (!validateAllFields()) {
-          toast({ title: "Atenção", description: "Preencha todos os campos obrigatórios em vermelho.", variant: "destructive" });
+          toast({ title: "Atenção", description: "Preencha todos os campos obrigatórios em vermelho.", variant: "destructive", className: "bg-white text-gray-900" });
           window.scrollTo({ top: 0, behavior: 'smooth' });
           return;
       }
       
       // Validate File Presence
+      const docsRequeridos = DOCS_CONFIG[contextData?.tipoReserva] ?? DOCS_CONFIG.particular;
       const missingFiles = [];
-      Object.keys(filesData).forEach(key => {
-          if (!filesData[key].file && filesData[key].status !== 'success') missingFiles.push(key.toUpperCase().replace('_', ' '));
+      docsRequeridos.forEach(({ key, label }) => {
+          if (!filesData[key]?.file && filesData[key]?.status !== 'success') missingFiles.push(label);
       });
 
       if (missingFiles.length > 0) {
           toast({ 
               title: "Documentos Faltando", 
               description: `Por favor, anexe: ${missingFiles.join(', ')}.`, 
-              variant: "destructive" 
+              variant: "destructive",
+              className: "bg-white text-gray-900"
           });
           return;
       }
@@ -156,100 +196,68 @@ const Documentos = () => {
   const handleFinalSubmit = async () => {
     setTermosOpen(false);
     setIsSubmitting(true);
-    setGlobalError(null);
-    console.log("[FLOW] --- INICIANDO PROCESSO DE FINALIZAÇÃO ---");
-
     try {
-        // 1. Create Reservation Record (if not already created)
-        let reservaId = createdReservaId;
+        const reserva = contextData.reserva;
+
+        // Build multipart/form-data payload
+        const payload = new FormData();
+
+        // Reservation fields
+        payload.append('carro_id',          contextData.carro?.id ?? '');
+        payload.append('data_retirada',     reserva.dataRetirada || reserva.dataInicio || '');
+        payload.append('data_devolucao',    reserva.dataDevolucao || reserva.dataFim || '');
+        payload.append('hora_retirada',            reserva.horaRetirada || '09:00');
+        payload.append('hora_retirada_solicitada', reserva.horaRetirada || '09:00');
+        payload.append('hora_devolucao',           reserva.horaDevolucao || '09:00');
+        payload.append('valor_total',       String(reserva.valorTotal ?? 0));
+        payload.append('tipo_reserva',      contextData.tipoReserva || reserva.tipo_locacao || '');
+        payload.append('plano',             reserva.plano ?? '');
+        payload.append('franquia_km',       String(reserva.franquia_km ?? ''));
+        payload.append('valor_diario',      String(reserva.valorDiario ?? 0));
+        payload.append('km_contratado',     String(reserva.km_contratado ?? 0));
+        payload.append('km_adicional_valor', String(reserva.kmExcedente ?? 0));
+        payload.append('origem_frota',      'site');
+        payload.append('aceitou_termos', 'true');
+
+
+        // User data as JSON string
+        const strip = (v) => (v ?? '').replace(/\D/g, '');
+        const usuarioPayload = {
+            nome:                 formData.nome,
+            email:                formData.email,
+            telefone:             '55' + strip(formData.telefone),
+            data_nascimento:      formData.data_nascimento,
+            cpf:                  strip(formData.cpf),
+            cnpj:                 strip(formData.cnpj),
+            endereco_cep:         strip(formData.endereco_cep),
+            endereco_rua:         formData.endereco_rua,
+            endereco_numero:      formData.endereco_numero,
+            endereco_complemento: formData.endereco_complemento ?? '',
+            endereco_cidade:      formData.endereco_cidade,
+            endereco_estado:      formData.endereco_estado,
+            cnh:                  formData.cnh ?? '',
+        };
+
+        // Attach files — named as `TIPO+filename.pdf` so the API identifies the type
+        const docsRequeridos = DOCS_CONFIG[contextData?.tipoReserva] ?? DOCS_CONFIG.particular;
+        docsRequeridos.forEach(({ key }) => {
+            const fileObj = filesData[key]?.file;
+            if (!fileObj) return;
+            const apiType = DOC_TYPE_MAP[key] ?? key;
+            const namedFile = new File([fileObj], `${apiType}+${fileObj.name}`, { type: fileObj.type });
+            payload.append('files', namedFile);
+        });
+
+        const response = await reservasService.postReservaComArquivos(payload);
+        const reservaId = response?.id ?? response?.data?.id;
         
-        if (!reservaId) {
-            console.log("[FLOW] Step 1: Criando reserva...");
-            
-            // Save user data first
-            const cleanedUserData = { ...formData };
-            delete cleanedUserData.id;
-            delete cleanedUserData.created_at;
-            delete cleanedUserData.updated_at;
-            await salvarDadosUsuario(usuario.id, cleanedUserData);
-
-            // Create reservation
-            const response = await createReserva(contextData); 
-            reservaId = response.id;
-            setCreatedReservaId(reservaId);
-            console.log(`[FLOW] Reserva criada com sucesso. ID: ${reservaId}`);
-        } else {
-            console.log(`[FLOW] Step 1: Retomando reserva existente ID: ${reservaId}`);
-        }
-
-        // 2. Process Uploads (Only process files not yet successfully uploaded)
-        const keysToUpload = Object.keys(filesData).filter(key => filesData[key].status !== 'success');
-        let uploadedDocs = []; // To store successful upload metadata
-        let hasErrors = false;
-
-        // Note: In real app we might want to preserve previously uploaded docs if retry happens.
-        // For simplicity, we assume one-shot success or retry of failures.
-        
-        for (const key of keysToUpload) {
-            const fileObj = filesData[key].file;
-            if (!fileObj) continue; // Should have been caught by validation
-
-            console.log(`[FLOW] >> Enviando arquivo: ${key}`);
-            setFilesData(prev => ({
-                ...prev,
-                [key]: { ...prev[key], status: 'uploading', error: null }
-            }));
-
-            const result = await uploadDocumento(fileObj, key, reservaId);
-
-            if (result.success) {
-                uploadedDocs.push(result.data);
-                setFilesData(prev => ({
-                    ...prev,
-                    [key]: { ...prev[key], status: 'success', error: null }
-                }));
-            } else {
-                console.error(`[FLOW] Erro no upload ${key}:`, result.error);
-                setFilesData(prev => ({
-                    ...prev,
-                    [key]: { ...prev[key], status: 'error', error: result.error }
-                }));
-                hasErrors = true;
-            }
-        }
-
-        if (hasErrors) {
-            throw new Error("Alguns documentos falharam. Verifique e tente novamente.");
-        }
-
-        // 3. Save All Metadata to DB
-        if (uploadedDocs.length > 0) {
-            console.log("[FLOW] Step 3: Salvando metadados no banco...");
-            const saveResult = await salvarTodosDocumentos(reservaId, uploadedDocs);
-            if (!saveResult.success) throw new Error("Erro ao salvar informações dos documentos.");
-        }
-
-        // 4. Finalize
-        console.log("[FLOW] Step 4: Finalizando reserva...");
-        await updateReservaStatus(reservaId, 'pendente');
-        
-        // Emails
-        const userEmail = formData.email;
-        if (userEmail) {
-            getEmailSuporte().then(rentalEmail => {
-                 sendReservationEmailToRental(reservaId, rentalEmail, formData, contextData.carro);
-                 sendConfirmationEmailToUser(reservaId, userEmail, formData, contextData.carro);
-            }).catch(e => console.error("Erro ao enviar emails:", e));
-        }
-
         toast({ title: "Reserva Realizada!", description: "Documentos enviados com sucesso.", className: "bg-green-600 text-white" });
         limparDados();
         navigate(`/confirmacao-reserva/${reservaId}`);
 
     } catch (error) {
         console.error('[Documentos] ERRO FATAL:', error);
-        setGlobalError(error.message || "Ocorreu um erro no processo.");
-        toast({ title: "Atenção", description: error.message, variant: "destructive" });
+        toast({ title: "Atenção", description: error.message || "Ocorreu um erro no processo.", variant: "destructive", className: "bg-white text-gray-900" });
     } finally {
         setIsSubmitting(false);
     }
@@ -269,6 +277,57 @@ const Documentos = () => {
   return (
     <>
       <Helmet><title>Finalizar Reserva | JL Rent a Car</title></Helmet>
+
+      {/* Modal de login obrigatório */}
+      <AnimatePresence>
+        {!isAuthenticated && (
+          <motion.div
+            key="auth-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center"
+            >
+              <div className="w-14 h-14 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-4">
+                <LogIn size={26} className="text-[#0066FF]" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Acesso necessário</h2>
+              <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                Para finalizar sua reserva você precisa estar logado na sua conta.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate('/login', { state: { from: location } })}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-[#0066FF] hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
+                >
+                  <LogIn size={18} />
+                  Fazer Login
+                </button>
+                <button
+                  onClick={() => navigate('/register', { state: { from: location } })}
+                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-bold rounded-xl transition-colors"
+                >
+                  <UserPlus size={18} />
+                  Criar Conta
+                </button>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Voltar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <div className="min-h-screen bg-[#F9FAFB] font-sans pb-32 lg:pb-12">
         <ProgressBar currentStep={2} />
@@ -303,61 +362,30 @@ const Documentos = () => {
                             </div>
                         </div>
 
-                        {globalError && (
-                            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200 flex items-start gap-3 animate-in slide-in-from-top-2">
-                                <AlertTriangle className="shrink-0 mt-0.5" size={20} />
-                                <div className="text-sm">
-                                    <p className="font-bold mb-1">Houve um problema no envio:</p>
-                                    <p>{globalError}</p>
-                                    <p className="mt-2 text-xs font-semibold">Tente enviar novamente clicando no botão abaixo.</p>
+                        {(() => {
+                            const docs = DOCS_CONFIG[contextData.tipoReserva] ?? DOCS_CONFIG.particular;
+                            const isOdd = docs.length % 2 !== 0;
+                            return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {docs.map(({ key, label }, idx) => {
+                                        const isLastOdd = isOdd && idx === docs.length - 1;
+                                        return (
+                                            <div key={key} className={isLastOdd ? 'md:col-span-2' : ''}>
+                                                <DocumentDropzone
+                                                    label={label}
+                                                    documentType={key}
+                                                    onUpload={handleFileSelect}
+                                                    loading={filesData[key]?.status === 'uploading'}
+                                                    success={filesData[key]?.status === 'success'}
+                                                    error={filesData[key]?.error}
+                                                    acceptImage={key === 'comprovante_trabalho'}
+                                                />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <DocumentDropzone 
-                                label="CNH (Completa)" 
-                                documentType="cnh"
-                                onUpload={handleFileSelect} 
-                                loading={filesData.cnh.status === 'uploading'}
-                                success={filesData.cnh.status === 'success'}
-                                error={filesData.cnh.error}
-                            />
-                            <DocumentDropzone 
-                                label="CPF" 
-                                documentType="cpf"
-                                onUpload={handleFileSelect} 
-                                loading={filesData.cpf.status === 'uploading'}
-                                success={filesData.cpf.status === 'success'}
-                                error={filesData.cpf.error}
-                            />
-                            <DocumentDropzone 
-                                label="RG (Frente e Verso)" 
-                                documentType="rg"
-                                onUpload={handleFileSelect} 
-                                loading={filesData.rg.status === 'uploading'}
-                                success={filesData.rg.status === 'success'}
-                                error={filesData.rg.error}
-                            />
-                            <DocumentDropzone 
-                                label="Comprovante de Residência" 
-                                documentType="comprovante_residencia"
-                                onUpload={handleFileSelect} 
-                                loading={filesData.comprovante_residencia.status === 'uploading'}
-                                success={filesData.comprovante_residencia.status === 'success'}
-                                error={filesData.comprovante_residencia.error}
-                            />
-                            <div className="md:col-span-2">
-                                <DocumentDropzone 
-                                    label="Histórico Criminal" 
-                                    documentType="historico_criminal"
-                                    onUpload={handleFileSelect} 
-                                    loading={filesData.historico_criminal.status === 'uploading'}
-                                    success={filesData.historico_criminal.status === 'success'}
-                                    error={filesData.historico_criminal.error}
-                                />
-                            </div>
-                        </div>
+                            );
+                        })()}
                     </section>
                 </motion.div>
 
@@ -368,7 +396,7 @@ const Documentos = () => {
                             reserva={contextData.reserva} 
                             loading={isSubmitting} 
                             onFinalizar={handlePreSubmit}
-                            buttonLabel={globalError ? "Tentar Novamente" : "Finalizar Reserva"}
+                            buttonLabel="Finalizar Reserva"
                         />
                     </div>
                 </motion.div>
@@ -380,7 +408,7 @@ const Documentos = () => {
                 reserva={contextData.reserva} 
                 loading={isSubmitting} 
                 onFinalizar={handlePreSubmit}
-                buttonLabel={globalError ? "Tentar Novamente" : "Finalizar Reserva"}
+                buttonLabel="Finalizar Reserva"
             />
         </div>
 

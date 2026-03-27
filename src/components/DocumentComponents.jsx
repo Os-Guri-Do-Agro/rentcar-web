@@ -2,11 +2,12 @@ import React, { useRef, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Loader2, UploadCloud, FileText, Trash2, CheckCircle2, AlertCircle, FileWarning, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { validatePDFFile } from '@/lib/validationUtils';
+import { validatePDFFile, validateImageFile } from '@/lib/validationUtils';
 
-export const DocumentDropzone = ({ onUpload, loading, error, success, label, documentType }) => {
+export const DocumentDropzone = ({ onUpload, loading, error, success, label, documentType, acceptImage = false }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [validationError, setValidationError] = useState(null);
   const inputRef = useRef(null);
 
   const handleDrag = (e) => {
@@ -37,15 +38,12 @@ export const DocumentDropzone = ({ onUpload, loading, error, success, label, doc
   };
 
   const handleFileSelection = (file) => {
-    const validation = validatePDFFile(file);
+    const validation = acceptImage ? validateImageFile(file) : validatePDFFile(file);
     if (!validation.valid) {
-       // We can trigger an external toast or handle error state here
-       // For now, let's use the error prop pattern or a local alert if needed
-       // But typically the parent handles the upload logic and sets error prop
-       alert(validation.error); // Simple feedback for immediate interaction
-       return; 
+      setValidationError(validation.error);
+      return;
     }
-    
+    setValidationError(null);
     setSelectedFile(file);
     onUpload(file, documentType);
   };
@@ -64,7 +62,7 @@ export const DocumentDropzone = ({ onUpload, loading, error, success, label, doc
 
   return (
     <div className="w-full mb-6">
-        <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center justify-between">
+        <label className="block text-sm font-bold text-gray-700 mb-2 md:flex items-center justify-between">
             <span>{label} <span className="text-red-500">*</span></span>
             {success && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 size={10} /> Enviado</span>}
         </label>
@@ -79,15 +77,15 @@ export const DocumentDropzone = ({ onUpload, loading, error, success, label, doc
                 "relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-all duration-200 group h-40",
                 loading && "bg-gray-50 border-gray-300 cursor-wait",
                 success && "bg-green-50 border-[#00D166] cursor-default opacity-80",
-                error && "bg-red-50 border-red-300 cursor-pointer",
-                !loading && !success && !error && (isDragging ? "border-[#00D166] bg-green-50 scale-[1.01]" : "border-gray-200 hover:border-[#00D166] hover:bg-gray-50 bg-white cursor-pointer")
+                (error || validationError) && "bg-red-50 border-red-300 cursor-pointer",
+                !loading && !success && !error && !validationError && (isDragging ? "border-[#00D166] bg-green-50 scale-[1.01]" : "border-gray-200 hover:border-[#00D166] hover:bg-gray-50 bg-white cursor-pointer")
             )}
         >
             <input 
                 ref={inputRef}
                 type="file" 
                 className="hidden" 
-                accept="application/pdf"
+                accept={acceptImage ? "image/jpeg,image/jpg,image/png,image/webp" : "application/pdf"}
                 onChange={handleChange}
                 disabled={loading || success}
             />
@@ -104,6 +102,13 @@ export const DocumentDropzone = ({ onUpload, loading, error, success, label, doc
                     </div>
                     <p className="font-bold text-[#0E3A2F] text-sm">{selectedFile?.name || "Arquivo Enviado"}</p>
                     <p className="text-xs text-gray-500">{fileSize > 0 ? `${fileSize} MB` : ''}</p>
+                </div>
+            ) : validationError ? (
+                <div className="flex flex-col items-center text-center animate-in shake">
+                    <AlertCircle className="text-red-500 mb-2" size={32} />
+                    <p className="font-bold text-red-600 text-sm">Arquivo inválido</p>
+                    <p className="text-xs text-red-500 mt-1 max-w-[200px]">{validationError}</p>
+                    <button onClick={() => setValidationError(null)} className="mt-2 text-xs font-bold underline text-red-400">Tentar novamente</button>
                 </div>
             ) : error ? (
                 <div className="flex flex-col items-center text-center animate-in shake">
@@ -122,7 +127,7 @@ export const DocumentDropzone = ({ onUpload, loading, error, success, label, doc
             ) : (
                 <>
                     <UploadCloud className="text-gray-400 group-hover:text-[#00D166] mb-2 transition-colors" size={32} />
-                    <p className="font-bold text-gray-700 text-sm text-center">Clique ou arraste o PDF</p>
+                    <p className="font-bold text-gray-700 text-sm text-center">{acceptImage ? 'Clique ou arraste a imagem' : 'Clique ou arraste o PDF'}</p>
                     <p className="text-xs text-gray-400 mt-1">Máx. 10MB</p>
                 </>
             )}
@@ -130,7 +135,7 @@ export const DocumentDropzone = ({ onUpload, loading, error, success, label, doc
         {!success && !loading && !error && !selectedFile && (
              <div className="flex items-center gap-1.5 text-xs text-amber-700 mt-1 px-1">
                 <AlertTriangle size={12} />
-                <span>Somente arquivos PDF</span>
+                <span>{acceptImage ? 'JPG, PNG ou WEBP' : 'Somente arquivos PDF'}</span>
              </div>
         )}
     </div>

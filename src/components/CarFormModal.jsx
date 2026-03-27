@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Upload } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { createCar, updateCar } from '@/services/carService';
+import carService from '@/services/cars/carService';
 
 const CarFormModal = ({ car, isOpen, onClose, onSuccess }) => {
   const { toast } = useToast();
@@ -90,10 +90,10 @@ const CarFormModal = ({ car, isOpen, onClose, onSuccess }) => {
       };
 
       if (car) {
-        await updateCar(car.id, payload);
+        await carService.patchCarById(car.id, payload);
         toast({ title: "Carro atualizado com sucesso!", className: "bg-green-600 text-white" });
       } else {
-        await createCar(payload);
+        await carService.postCars(payload);
         toast({ title: "Carro criado com sucesso!", className: "bg-green-600 text-white" });
       }
       onSuccess();

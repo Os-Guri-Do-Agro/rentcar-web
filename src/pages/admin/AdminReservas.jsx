@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, Search, Eye, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { listReservas } from '@/services/reservaService';
+import reservasService from '@/services/reservas/reservas-services';
 import { logAdminDebug } from '@/lib/debugUtils';
 
 const AdminReservas = () => {
@@ -37,8 +37,9 @@ const AdminReservas = () => {
         
         try {
             // Using service method with explicit foreign keys
-            const data = await listReservas();
-            
+            const res = await reservasService.getReservas();
+            const data = res?.data ?? res;
+
             if (Array.isArray(data)) {
                 setReservas(data);
                 logAdminDebug("Fetched records:", data.length);

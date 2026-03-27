@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Loader2, Mail, MessageSquare, CheckCircle, XCircle, RefreshCw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Mail, MessageSquare, CheckCircle, XCircle, RefreshCw, Search, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownLeft, Settings2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
+import whatsappService from '@/services/whatsapp/whatsapp-service';
 
 const AdminLogs = () => {
   const [activeTab, setActiveTab] = useState('email');
@@ -13,34 +15,37 @@ const AdminLogs = () => {
   const [totalCount, setTotalCount] = useState(0);
   const PAGE_SIZE = 20;
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const fetchLogs = async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
 
-      const table = activeTab === 'email' ? 'email_logs' : 'whatsapp_logs';
-      let query = supabase
-        .from(table)
-        .select('*', { count: 'exact' });
+      if (activeTab === 'whatsapp') {
+        const res = await whatsappService.getLogs(page + 1, PAGE_SIZE, search || undefined);
+        const records = res?.data?.logs ?? res?.data ?? res?.logs ?? [];
+        const total = res?.data?.total ?? res?.total ?? records.length;
+        setLogs(records);
+        setTotalCount(total);
+      } else {
+        let query = supabase
+          .from('email_logs')
+          .select('*', { count: 'exact' });
 
-      if (search) {
-         if (activeTab === 'email') {
-             query = query.or(`destinatario.ilike.%${search}%,assunto.ilike.%${search}%`);
-         } else {
-             query = query.or(`numero_telefone.ilike.%${search}%,mensagem.ilike.%${search}%`);
-         }
+        if (search) {
+          query = query.or(`destinatario.ilike.%${search}%,assunto.ilike.%${search}%`);
+        }
+
+        query = query
+          .order('created_at', { ascending: false })
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        const { data, count, error } = await query;
+        if (error) throw error;
+        setLogs(data);
+        setTotalCount(count);
       }
-
-      query = query
-        .order('created_at', { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-      const { data, count, error } = await query;
-
-      if (error) throw error;
-      setLogs(data);
-      setTotalCount(count);
     } catch (error) {
       toast({ title: "Erro", description: "Falha ao buscar logs.", variant: "destructive" });
     } finally {
@@ -69,6 +74,13 @@ const AdminLogs = () => {
             <p className="text-sm text-gray-500">Histórico de comunicações enviadas.</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
+            <button
+              onClick={() => navigate('/admin/emails')}
+              className="flex items-center gap-2 px-4 py-2 bg-[#0E3A2F] hover:bg-[#165945] text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              <Settings2 size={16} />
+              Gerenciar Templates
+            </button>
             <div className="relative flex-1 md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
@@ -123,22 +135,41 @@ const AdminLogs = () => {
                             <tr>
                                 <th className="p-4 w-24">Status</th>
                                 <th className="p-4 w-40">Data/Hora</th>
-                                <th className="p-4 w-64">{activeTab === 'email' ? 'Destinatário' : 'Telefone'}</th>
+                                <th className="p-4 w-52">{activeTab === 'email' ? 'Destinatário' : 'Telefone'}</th>
                                 <th className="p-4">{activeTab === 'email' ? 'Assunto' : 'Mensagem'}</th>
-                                <th className="p-4 w-20 text-center">Reserva</th>
+                                {activeTab === 'whatsapp' && <th className="p-4 w-28">Enviado por</th>}
+                                <th className="p-4 w-20 text-center"> </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 text-sm">
-                            {logs.map(log => (
-                                <tr key={log.id} className={`hover:bg-gray-50 transition-colors ${log.status === 'error' ? 'bg-red-50/30' : ''}`}>
+                            {logs.map(log => {
+                                const isWhatsapp = activeTab === 'whatsapp';
+                                const isSuccess = log.status === 'enviado' || log.status === 'success' || log.status === 'sent';
+                                const isError = log.status === 'erro' || log.status === 'error';
+                                const isRecebido = log.status === 'recebido';
+                                let erroDetalhe = log.erro_mensagem;
+                                if (erroDetalhe) {
+                                    try {
+                                        const parsed = JSON.parse(erroDetalhe);
+                                        erroDetalhe = parsed?.error ?? parsed?.response?.message?.[0]?.exists === false
+                                            ? 'Número sem WhatsApp'
+                                            : (parsed?.error ?? erroDetalhe);
+                                    } catch (_) { /* keep raw */ }
+                                }
+                                return (
+                                <tr key={log.id} className={`hover:bg-gray-50 transition-colors ${!isWhatsapp && isError ? 'bg-red-50/30' : ''}`}>
                                     <td className="p-4">
-                                        {log.status === 'success' || log.status === 'sent' ? (
-                                            <span className="flex items-center gap-1 text-green-700 font-bold bg-green-100 px-2.5 py-1 rounded-full w-fit text-xs border border-green-200 shadow-sm"><CheckCircle size={12}/> Sucesso</span>
+                                        {isWhatsapp ? (
+                                            isRecebido
+                                                ? <span className="flex items-center gap-1 text-blue-700 font-bold bg-blue-50 px-2.5 py-1 rounded-full w-fit text-xs border border-blue-200 shadow-sm"><ArrowDownLeft size={12}/> Recebido</span>
+                                                : <span className="flex items-center gap-1 text-green-700 font-bold bg-green-100 px-2.5 py-1 rounded-full w-fit text-xs border border-green-200 shadow-sm"><ArrowUpRight size={12}/> Enviado</span>
+                                        ) : isSuccess ? (
+                                            <span className="flex items-center gap-1 text-green-700 font-bold bg-green-100 px-2.5 py-1 rounded-full w-fit text-xs border border-green-200 shadow-sm"><CheckCircle size={12}/> Enviado</span>
                                         ) : (
                                             <div className="flex flex-col gap-1">
                                                 <span className="flex items-center gap-1 text-red-700 font-bold bg-red-100 px-2.5 py-1 rounded-full w-fit text-xs border border-red-200 shadow-sm"><XCircle size={12}/> Falha</span>
-                                                {log.erro_mensagem && (
-                                                    <span className="text-[10px] text-red-600 max-w-[100px] truncate" title={log.erro_mensagem}>{log.erro_mensagem}</span>
+                                                {erroDetalhe && (
+                                                    <span className="text-[10px] text-red-600 max-w-[120px] truncate" title={log.erro_mensagem}>{erroDetalhe}</span>
                                                 )}
                                             </div>
                                         )}
@@ -155,6 +186,9 @@ const AdminLogs = () => {
                                             {activeTab === 'email' ? log.assunto : log.mensagem}
                                         </div>
                                     </td>
+                                    {activeTab === 'whatsapp' && (
+                                        <td className="p-4 text-gray-500 text-xs">{log.created_by ?? 'Cliente'}</td>
+                                    )}
                                     <td className="p-4 text-center">
                                         {log.reserva_id ? (
                                             <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-mono">
@@ -165,7 +199,8 @@ const AdminLogs = () => {
                                         )}
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                  </div>

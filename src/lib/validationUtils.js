@@ -135,6 +135,26 @@ export const validatePDFFile = (file) => {
 // Deprecated alias for backward compatibility
 export const validateDocumentFile = validatePDFFile;
 
+export const validateImageFile = (file) => {
+  if (!file) return { valid: false, error: 'Nenhum arquivo selecionado.' };
+
+  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const ALLOWED_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
+  const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+
+  if (!ALLOWED_EXTS.includes(ext))
+    return { valid: false, error: 'O arquivo deve ser uma imagem (JPG, PNG ou WEBP).' };
+
+  if (!ALLOWED_TYPES.includes(file.type))
+    return { valid: false, error: 'Formato inválido. Apenas JPG, PNG ou WEBP são permitidos.' };
+
+  const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+  if (file.size > MAX_SIZE_BYTES)
+    return { valid: false, error: `Arquivo muito grande (${(file.size/1024/1024).toFixed(2)}MB). Máximo permitido é 10MB.` };
+
+  return { valid: true };
+};
+
 export const isValidUUID = (value) => {
   const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return regex.test(value);

@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import AvaliacoesCarrossel from '@/components/AvaliacoesCarrossel';
-import { getAvaliacoes } from '@/services/avaliacoesService';
-import { supabase } from '@/lib/supabaseClient';
-import { Loader2 } from 'lucide-react';
 
 const TestimonialsSection = () => {
     // Note: The AvaliacoesCarrossel component itself handles fetching in the previous implementation request.

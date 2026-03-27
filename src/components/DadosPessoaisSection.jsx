@@ -8,7 +8,7 @@ const InputField = ({
   label, name, value, onChange, onBlur, error, success, type = "text", placeholder, icon: Icon, disabled = false 
 }) => (
   <div className="relative mb-4">
-    <label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-1.5 flex justify-between">
+    <label htmlFor={name} className="block text-sm font-semibold text-gray-700 mb-1.5 md:flex justify-between">
       {label}
       <AnimatePresence>
         {error && (
@@ -63,14 +63,19 @@ const InputField = ({
 
 const DadosPessoaisSection = ({ formData, setFormData, errors, setErrors, touched, setTouched }) => {
 
+  const masks = {
+    telefone: v => v.replace(/\D/g, '').slice(0, 11).replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3').replace(/^(\d{2})(\d{0,5})/, '($1) $2'),
+    cpf: v => v.replace(/\D/g, '').slice(0, 11).replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4').replace(/(\d{3})(\d{3})(\d{0,3})/, '$1.$2.$3').replace(/(\d{3})(\d{0,3})/, '$1.$2'),
+    endereco_cep: v => v.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d{0,3})/, '$1-$2'),
+    cnh: v => v.replace(/\D/g, '').slice(0, 11),
+    endereco_estado: v => v.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase(),
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error on type
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
-    }
+    const masked = masks[name] ? masks[name](value) : value;
+    setFormData(prev => ({ ...prev, [name]: masked }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
 
   const handleBlur = (e) => {

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Loader2, Calendar, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, FileText, Download, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import reservasServices from '@/services/reservas/reservas-services';
 
 const AdminReservations = () => {
   const [reservas, setReservas] = useState([]);
@@ -23,17 +24,9 @@ const AdminReservations = () => {
       console.log("[AdminReservations] Fetching reservas with explicit FK syntax");
 
       // FK Explícita para users e cars
-      const { data, error } = await supabase
-        .from('reservas')
-        .select(`
-            *,
-            users:users!reservas_usuario_id_fkey (nome, email, telefone),
-            cars:cars!reservas_carro_id_fkey (nome, placa)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setReservas(data);
+      const response = await reservasServices.getReservas();
+      if (!response?.success) throw new Error('Falha ao buscar reservas');
+      setReservas(response.data);
       setLastSynced(new Date());
       setSyncStatus('synced');
 
@@ -58,7 +51,7 @@ const AdminReservations = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, (payload) => {
         console.log("Reserva updated:", payload);
         fetchReservas();
-        toast({ title: "Nova atualização", description: "Dados de reserva atualizados." });
+        toast({ title: "Nova atualização", description: "Dados de reserva atualizados.", className: "bg-blue-600 text-white border-none" });
       })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') setSyncStatus('error');
@@ -105,13 +98,19 @@ const AdminReservations = () => {
           </button>
 
           <div className="flex bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
-            {['all', 'pendente', 'confirmada', 'cancelada'].map(status => (
+            {[
+              { value: 'all',        label: 'Todas' },
+              { value: 'pendente',   label: 'Pendentes' },
+              { value: 'aceita',     label: 'Aprovadas' },
+              { value: 'confirmada', label: 'Confirmadas' },
+              { value: 'cancelada',  label: 'Canceladas' },
+            ].map(({ value, label }) => (
               <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-md text-sm font-medium capitalize ${filter === status ? 'bg-[#0E3A2F] text-white shadow' : 'text-gray-600 hover:bg-gray-50'}`}
+                key={value}
+                onClick={() => setFilter(value)}
+                className={`px-4 py-2 rounded-md text-sm font-medium ${filter === value ? 'bg-[#0E3A2F] text-white shadow' : 'text-gray-600 hover:bg-gray-50'}`}
               >
-                {status === 'all' ? 'Todas' : status}
+                {label}
               </button>
             ))}
           </div>
@@ -130,7 +129,7 @@ const AdminReservations = () => {
                   <th className="px-6 py-4">Cliente</th>
                   <th className="px-6 py-4">Veículo</th>
                   <th className="px-6 py-4">Período</th>
-                  <th className="px-6 py-4">Docs</th>
+                  <th className="px-6 py-4"> </th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
@@ -161,8 +160,16 @@ const AdminReservations = () => {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase inline-flex items-center gap-1 ${res.status === 'confirmada' ? 'bg-green-100 text-green-800' : res.status === 'cancelada' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {res.status}
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase inline-flex items-center gap-1 ${
+                        res.status === 'confirmada' ? 'bg-green-100 text-green-800' :
+                        res.status === 'aceita'     ? 'bg-blue-100 text-blue-800' :
+                        res.status === 'cancelada'  ? 'bg-red-100 text-red-800' :
+                                                      'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {res.status === 'aceita' ? 'Aprovada' :
+                         res.status === 'pendente' ? 'Pendente' :
+                         res.status === 'confirmada' ? 'Confirmada' :
+                         res.status === 'cancelada' ? 'Cancelada' : res.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-2">

@@ -1,15 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogOut, User, Shield, Calendar } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import userService from './services/user/userService';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated, usuario, logout, isAdmin } = useAuth();
+  const { isAuthenticated, logout, isAdmin, isBlog } = useAuth();
+const [user, setUser] = useState(null)
 
   const isActive = (path) => location.pathname === path ? 'text-[#00D166]' : 'text-white hover:text-[#00D166]';
   const closeMenu = () => setIsMenuOpen(false);
+
+  useEffect(() => {
+    if (isAuthenticated) infoUser();
+  }, [isAuthenticated])
+
+  const infoUser = async () => {
+    try {
+      const r = await userService.getUsersMe()
+      setUser(r.data)
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   return (
     <header className="bg-[#0E3A2F] text-white sticky top-0 z-50 shadow-lg border-b border-white/10">
@@ -37,9 +52,9 @@ const Header = () => {
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
                 
-                {isAdmin && (
+                {(isAdmin || isBlog) && (
                   <Link 
-                    to="/admin" 
+                    to={isBlog ? "/admin/blog" : "/admin"}
                     className="flex items-center gap-2 px-3 py-1.5 bg-purple-600/20 text-purple-300 rounded-lg hover:bg-purple-600/30 transition-colors border border-purple-500/30"
                   >
                     <Shield size={16} /> <span className="text-xs font-bold uppercase">Painel Admin</span>
@@ -57,8 +72,8 @@ const Header = () => {
 
                 <Link to="/user" className="flex items-center gap-2 text-sm hover:text-[#00D166] transition-colors group">
                   <div className="w-8 h-8 rounded-full bg-[#00D166]/20 flex items-center justify-center text-[#00D166] group-hover:bg-[#00D166] group-hover:text-[#0E3A2F] transition-all overflow-hidden">
-                    {usuario?.foto_perfil_url ? (
-                       <img src={usuario.foto_perfil_url} alt="User" className="w-full h-full object-cover" />
+                    {user?.foto_perfil_url ? (
+                       <img src={user?.imagem_url} alt="User" className="w-full h-full object-cover" />
                     ) : (
                        <User size={16} />
                     )}
@@ -116,8 +131,8 @@ const Header = () => {
                      </div>
                   </div>
                   
-                  {isAdmin && (
-                    <Link to="/admin" className="flex items-center gap-2 w-full py-3 px-2 text-purple-300 hover:bg-purple-900/20 rounded-lg mb-2" onClick={closeMenu}>
+                  {(isAdmin || isBlog) && (
+                    <Link to={isBlog ? "/admin/blog" : "/admin"} className="flex items-center gap-2 w-full py-3 px-2 text-purple-300 hover:bg-purple-900/20 rounded-lg mb-2" onClick={closeMenu}>
                        <Shield size={18} /> Painel Administrativo
                     </Link>
                   )}

@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 import SectionContainer from '../SectionContainer';
 import CarCard from '../CarCard';
-import { getCarrosDestaque } from '@/services/carrosDestaqueService';
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import carsDestaqueService from '@/services/cars/destaques/carsDestaque-service';
 
 const FeaturedCarsSection = () => {
   const [cars, setCars] = useState([]);
@@ -13,25 +12,12 @@ const FeaturedCarsSection = () => {
 
   useEffect(() => {
     fetchFeatured();
-    
-    // Realtime listener
-    const channel = supabase
-      .channel('public_featured_cars')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'carros_destaque' }, () => {
-          console.log("Carros em destaque atualizados em tempo real");
-          fetchFeatured();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const fetchFeatured = async () => {
     try {
-      const data = await getCarrosDestaque();
-      setCars(data);
+      const response = await carsDestaqueService.getCarsDestaque()
+      setCars(response.data ?? []);
     } catch (error) {
       console.error("Error loading featured cars:", error);
     } finally {

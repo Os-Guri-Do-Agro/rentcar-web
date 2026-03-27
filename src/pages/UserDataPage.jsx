@@ -74,8 +74,14 @@ const UserDataPage = () => {
         return;
     }
 
-    console.log("Dados do usuário preenchidos", formData);
-    setDadosUsuario(formData);
+    const strip = (v) => (v ?? '').replace(/\D/g, '');
+    const dadosLimpos = {
+        ...formData,
+        telefone:     strip(formData.telefone),
+        cpf:          strip(formData.cpf),
+        endereco_cep: strip(formData.endereco_cep),
+    };
+    setDadosUsuario(dadosLimpos);
     console.log("Dados salvos no contexto");
 
     if (dadosCarro && dadosCarro.id) {

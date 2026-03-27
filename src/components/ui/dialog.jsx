@@ -1,18 +1,16 @@
 import React from "react"
 import { cn } from "@/lib/utils"
 
-const Dialog = ({ open, onOpenChange, children }) => {
+const Dialog = ({ open, onOpenChange, children, maxWidth = "max-w-lg" }) => {
   if (!open) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" 
         onClick={() => onOpenChange(false)}
       />
-      {/* Dialog Content Container */}
-      <div className="relative z-50 w-full max-w-lg p-4">
+      <div className={cn("relative z-50 w-full p-4", maxWidth)}>
         {children}
       </div>
     </div>

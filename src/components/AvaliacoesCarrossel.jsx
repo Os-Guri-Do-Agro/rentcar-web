@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Autoplay, Pagination } from 'swiper/modules';
 import { Star, Quote, Loader2 } from 'lucide-react';
-import { getAvaliacoes } from '@/services/avaliacoesService';
 import { supabase } from '@/lib/supabaseClient';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import avaliacoesService from '@/services/avaliacoes/avaliacoes-service';
 
 const AvaliacoesCarrossel = () => {
     const [reviews, setReviews] = useState([]);
@@ -15,9 +15,8 @@ const AvaliacoesCarrossel = () => {
     useEffect(() => {
         const fetchReviews = async () => {
             try {
-                const data = await getAvaliacoes();
-                console.log("[AvaliacoesCarrossel] Loaded reviews:", data.length);
-                setReviews(data);
+                const res = await avaliacoesService.getAvaliacoes();
+                setReviews(res.data);
             } catch (err) {
                 console.error(err);
             } finally {
