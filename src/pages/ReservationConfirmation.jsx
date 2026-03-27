@@ -85,6 +85,29 @@ const ReservationConfirmation = () => {
                     </div>
                   </div>
 
+                  {/* Period & Times */}
+                  <div className="border-t border-gray-100 pt-5 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase font-bold tracking-wide mb-1">Retirada</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {new Date(reservation.data_retirada).toLocaleDateString('pt-BR')}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        às {reservation.hora_retirada_solicitada || '—'}
+                        {reservation.hora_retirada && reservation.hora_retirada !== reservation.hora_retirada_solicitada && (
+                          <span className="ml-1 text-amber-600">(confirmado: {reservation.hora_retirada})</span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase font-bold tracking-wide mb-1">Devolução</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {new Date(reservation.data_devolucao).toLocaleDateString('pt-BR')}
+                      </p>
+                      <p className="text-xs text-gray-500">às {reservation.hora_devolucao || '—'}</p>
+                    </div>
+                  </div>
+
                   {/* Documents Section */}
                   <div className="border-t border-gray-100 pt-6 mt-6">
                       <h4 className="text-sm font-bold text-gray-700 uppercase mb-4 flex items-center gap-2"><FileText size={16}/> Documentos Enviados</h4>

@@ -21,6 +21,7 @@ const VARIAVEIS_DISPONIVEIS = [
   { key: 'nome_carro',   label: 'Carro' },
   { key: 'data_retirada', label: 'Data Retirada' },
   { key: 'hora_retirada', label: 'Hora Retirada' },
+  { key: 'hora_retirada_solicitada', label: 'Hora Solicitada' },
   { key: 'data_devolucao', label: 'Data Devolução' },
   { key: 'hora_devolucao', label: 'Hora Devolução' },
   { key: 'valor_total',  label: 'Valor Total' },

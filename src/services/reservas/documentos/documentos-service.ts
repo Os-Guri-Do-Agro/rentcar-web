@@ -29,7 +29,7 @@ class documentosService {
 
   postDocumentsUpload(reservaId: string, data: any): Promise<any> {
     return this.handleRequest(
-      api.post(`/reservas/${reservaId}/documents/upload`, data, { headers: this.authHeader() }),
+      api.post(`/reservas/${reservaId}/documents/upload`, data, { headers: { ...this.authHeader(), 'Content-Type': 'multipart/form-data' } }),
       'Erro ao fazer upload dos documentos'
     )
   }

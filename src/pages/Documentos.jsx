@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ShieldCheck, AlertTriangle, UploadCloud, LogIn, UserPlus } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, UploadCloud, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useReserva } from '@/context/ReservaContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -72,7 +72,6 @@ const Documentos = () => {
   );
 
   const [termosOpen, setTermosOpen] = useState(false);
-  const [globalError, setGlobalError] = useState(null);
 
   useEffect(() => {
     let dados = null;
@@ -191,8 +190,6 @@ const Documentos = () => {
   const handleFinalSubmit = async () => {
     setTermosOpen(false);
     setIsSubmitting(true);
-    setGlobalError(null);
-
     try {
         const reserva = contextData.reserva;
 
@@ -203,8 +200,9 @@ const Documentos = () => {
         payload.append('carro_id',          contextData.carro?.id ?? '');
         payload.append('data_retirada',     reserva.dataRetirada || reserva.dataInicio || '');
         payload.append('data_devolucao',    reserva.dataDevolucao || reserva.dataFim || '');
-        payload.append('hora_retirada',     reserva.horaRetirada || '09:00');
-        payload.append('hora_devolucao',    reserva.horaDevolucao || '09:00');
+        payload.append('hora_retirada',            reserva.horaRetirada || '09:00');
+        payload.append('hora_retirada_solicitada', reserva.horaRetirada || '09:00');
+        payload.append('hora_devolucao',           reserva.horaDevolucao || '09:00');
         payload.append('valor_total',       String(reserva.valorTotal ?? 0));
         payload.append('tipo_reserva',      contextData.tipoReserva || reserva.tipo_locacao || '');
         payload.append('plano',             reserva.plano ?? '');
@@ -253,8 +251,7 @@ const Documentos = () => {
 
     } catch (error) {
         console.error('[Documentos] ERRO FATAL:', error);
-        setGlobalError(error.message || "Ocorreu um erro no processo.");
-        toast({ title: "Atenção", description: error.message, variant: "destructive" });
+        toast({ title: "Atenção", description: error.message || "Ocorreu um erro no processo.", variant: "destructive" });
     } finally {
         setIsSubmitting(false);
     }
@@ -359,17 +356,6 @@ const Documentos = () => {
                             </div>
                         </div>
 
-                        {globalError && (
-                            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200 flex items-start gap-3 animate-in slide-in-from-top-2">
-                                <AlertTriangle className="shrink-0 mt-0.5" size={20} />
-                                <div className="text-sm">
-                                    <p className="font-bold mb-1">Houve um problema no envio:</p>
-                                    <p>{globalError}</p>
-                                    <p className="mt-2 text-xs font-semibold">Tente enviar novamente clicando no botão abaixo.</p>
-                                </div>
-                            </div>
-                        )}
-
                         {(() => {
                             const docs = DOCS_CONFIG[contextData.tipoReserva] ?? DOCS_CONFIG.particular;
                             const isOdd = docs.length % 2 !== 0;
@@ -404,7 +390,7 @@ const Documentos = () => {
                             reserva={contextData.reserva} 
                             loading={isSubmitting} 
                             onFinalizar={handlePreSubmit}
-                            buttonLabel={globalError ? "Tentar Novamente" : "Finalizar Reserva"}
+                            buttonLabel="Finalizar Reserva"
                         />
                     </div>
                 </motion.div>
@@ -416,7 +402,7 @@ const Documentos = () => {
                 reserva={contextData.reserva} 
                 loading={isSubmitting} 
                 onFinalizar={handlePreSubmit}
-                buttonLabel={globalError ? "Tentar Novamente" : "Finalizar Reserva"}
+                buttonLabel="Finalizar Reserva"
             />
         </div>
 

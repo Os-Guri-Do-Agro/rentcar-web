@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
-  MessageCircle, Send, MapPin, Image, FileText,
-  CheckCircle, XCircle, Phone, Loader2, ChevronDown, ChevronUp, AlertCircle
+  MessageCircle, Send, MapPin, Phone, Loader2, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import whatsappService from '@/services/whatsapp/whatsapp-service';
@@ -14,75 +13,13 @@ const LOJA = {
   address: 'Rua Fernando Falcão, 54 - Mooca, São Paulo - SP',
 };
 
-const fmtDate = (d) => {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('pt-BR');
-};
-
-const fmtBRL = (v) =>
-  Number(v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
 // ─── Templates ──────────────────────────────────────────────────────────────
 
 const buildTemplates = (reserva) => {
   const nome = reserva?.users?.nome?.split(' ')[0] ?? 'Cliente';
   const veiculo = reserva?.cars?.nome ?? 'veículo';
-  const retirada = fmtDate(reserva?.data_retirada ?? reserva?.data_inicio);
-  const devolucao = fmtDate(reserva?.data_devolucao ?? reserva?.data_fim);
-  const total = fmtBRL(reserva?.valor_total);
-  const motivo = reserva?.motivo_cancelamento ?? 'não informado';
 
   return [
-    {
-      id: 'confirmada',
-      label: 'Reserva Confirmada',
-      icon: CheckCircle,
-      color: 'text-green-600 bg-green-50 border-green-200 hover:bg-green-100',
-      text:
-`━━━━━━━━━━━━━━━━━━━━
-  ✅ JL RENT CAR
-  Reserva Confirmada
-━━━━━━━━━━━━━━━━━━━━
-
-Ótima notícia, ${nome}! 🎉
-
-Sua reserva foi *CONFIRMADA* pela nossa equipe.
-
-📋 Resumo:
-├ Veículo: ${veiculo}
-├ Retirada: ${retirada}
-├ Devolução: ${devolucao}
-└ Total: ${total}
-
-📄 Documentos necessários na retirada:
-├ CNH (original e dentro da validade)
-├ CPF ou RG
-└ Comprovante de residência
-
-⚠️ Importante:
-• Apresente-se no horário combinado
-• Leve todos os documentos originais
-• O veículo será entregue com tanque cheio`,
-    },
-    {
-      id: 'rejeitada',
-      label: 'Reserva Rejeitada',
-      icon: XCircle,
-      color: 'text-red-600 bg-red-50 border-red-200 hover:bg-red-100',
-      text:
-`━━━━━━━━━━━━━━━━━━━━
-  ❌ JL RENT CAR
-  Reserva Não Aprovada
-━━━━━━━━━━━━━━━━━━━━
-
-Olá, ${nome}.
-
-Infelizmente não foi possível aprovar sua reserva do ${veiculo}.
-
-📌 Motivo: ${motivo}
-
-Você pode tentar novamente ou entrar em contato conosco.`,
-    },
     {
       id: 'lembrete_retirada',
       label: 'Lembrete de Retirada',
