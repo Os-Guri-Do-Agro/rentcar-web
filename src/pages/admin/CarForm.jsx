@@ -125,7 +125,7 @@ const CarForm = () => {
 
       if (isEditMode) {
         await carService.patchCarById(id, { imagem_url: url, foto_principal: url });
-        toast({ title: 'Foto atualizada com sucesso!' });
+        toast({ title: 'Foto atualizada com sucesso!', className: 'bg-green-600 text-white border-none' });
       }
     } catch {
       toast({ title: 'Erro ao enviar imagem', variant: 'destructive' });
@@ -181,10 +181,10 @@ const CarForm = () => {
     try {
       if (isEditMode) {
         await carService.patchCarById(id, payload);
-        toast({ title: "Veículo atualizado com sucesso!" });
+        toast({ title: "Veículo atualizado com sucesso!", className: "bg-green-600 text-white border-none" });
       } else {
         await carService.postCars(payload);
-        toast({ title: "Veículo criado com sucesso!" });
+        toast({ title: "Veículo criado com sucesso!", className: "bg-green-600 text-white border-none" });
       }
       navigate('/admin/frota');
     } catch (error) {

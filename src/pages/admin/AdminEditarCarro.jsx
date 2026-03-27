@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Save, ArrowLeft, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
 import { uploadFoto, updateFotoPrincipal, updateFotosGaleria, deleteFoto } from '@/services/fotosService';
 import BrandSelector from '@/components/BrandSelector';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const SPEC_OPTIONS = [
    "Multimídia com fio", "Ar-condicionado", "Ar-condicionado digital", "Multimídia sem fio",
@@ -23,6 +24,7 @@ const AdminEditarCarro = () => {
    const [loading, setLoading] = useState(true);
    const [saving, setSaving] = useState(false);
    const [uploading, setUploading] = useState(false);
+   const [confirmRemoveIdx, setConfirmRemoveIdx] = useState(null);
 
    // Form States
    const [formData, setFormData] = useState({});
@@ -74,7 +76,7 @@ const AdminEditarCarro = () => {
          const url = await uploadFoto(file, carroId, 'main');
          await updateFotoPrincipal(carroId, url);
          setFormData(prev => ({ ...prev, foto_principal: url, imagem_url: url }));
-         toast({ title: "Foto principal atualizada" });
+         toast({ title: "Foto principal atualizada", className: "bg-green-600 text-white border-none" });
       } catch (error) {
          toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
       } finally {
@@ -95,7 +97,7 @@ const AdminEditarCarro = () => {
          const updatedGallery = [...gallery, ...newUrls];
          setGallery(updatedGallery);
          await updateFotosGaleria(carroId, updatedGallery);
-         toast({ title: "Galeria atualizada" });
+         toast({ title: "Galeria atualizada", className: "bg-green-600 text-white border-none" });
       } catch (error) {
          toast({ title: "Erro no upload", variant: "destructive" });
       } finally {
@@ -103,13 +105,17 @@ const AdminEditarCarro = () => {
       }
    };
 
-   const removeGalleryPhoto = async (index) => {
-      if (!window.confirm("Remover foto?")) return;
-      const photoUrl = gallery[index];
-      const newGallery = gallery.filter((_, i) => i !== index);
+   const removeGalleryPhoto = (index) => {
+      setConfirmRemoveIdx(index);
+   };
+
+   const confirmRemovePhoto = async () => {
+      const photoUrl = gallery[confirmRemoveIdx];
+      const newGallery = gallery.filter((_, i) => i !== confirmRemoveIdx);
       setGallery(newGallery);
+      setConfirmRemoveIdx(null);
       await updateFotosGaleria(carroId, newGallery);
-      await deleteFoto(photoUrl); // Optional cleanup
+      await deleteFoto(photoUrl);
    };
 
    const handleSave = async () => {
@@ -144,6 +150,18 @@ const AdminEditarCarro = () => {
 
    return (
       <div className="p-6 md:p-10 bg-gray-50 min-h-screen">
+         <AlertDialog open={confirmRemoveIdx !== null} onOpenChange={(o) => !o && setConfirmRemoveIdx(null)}>
+            <AlertDialogContent>
+               <AlertDialogHeader>
+                  <AlertDialogTitle>Remover foto?</AlertDialogTitle>
+                  <AlertDialogDescription>A foto será removida da galeria permanentemente.</AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmRemovePhoto} className="bg-red-600 hover:bg-red-700 text-white">Remover</AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
          <Helmet title={`Editar | ${car.nome}`} />
 
          <div className="max-w-5xl mx-auto">

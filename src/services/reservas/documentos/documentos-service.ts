@@ -41,6 +41,13 @@ class documentosService {
     )
   }
 
+  getDocumentosDownload(reservaId: string, documentoId: string): Promise<any> {
+    return this.handleRequest(
+      api.get(`/reservas/${reservaId}/documents/${documentoId}/download`, { headers: this.authHeader(), responseType: 'blob' }),
+      'Erro ao fazer download do documento'
+    )
+  }
+
 }
 
 export default new documentosService()

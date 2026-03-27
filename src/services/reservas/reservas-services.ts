@@ -130,7 +130,7 @@ class reservasService {
 
   postReservaEnviarEmail(reservaId: string): Promise<any> {
     return this.handleRequest(
-      api.post(`/reservas/${reservaId}/confirmar-envio`, { headers: this.authHeader() }),
+      api.post(`/reservas/${reservaId}/confirmar-envio`, {}, { headers: this.authHeader() }),
       'Erro ao enviar email'
     )
   }

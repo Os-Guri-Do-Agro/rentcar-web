@@ -51,7 +51,7 @@ const AdminReservations = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, (payload) => {
         console.log("Reserva updated:", payload);
         fetchReservas();
-        toast({ title: "Nova atualização", description: "Dados de reserva atualizados." });
+        toast({ title: "Nova atualização", description: "Dados de reserva atualizados.", className: "bg-blue-600 text-white border-none" });
       })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') setSyncStatus('error');

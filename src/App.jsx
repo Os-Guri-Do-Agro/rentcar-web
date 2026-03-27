@@ -54,7 +54,7 @@ import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminTermsAndRules from '@/pages/admin/AdminTermsAndRules';
 import AdminEmailConfig from '@/pages/admin/AdminEmailConfig';
 import AdminUsers from '@/pages/admin/AdminUsers';
-import AdminCars from '@/pages/admin/AdminCars';
+// import AdminCars from '@/pages/admin/AdminCars';
 import AdminFleetManager from '@/pages/admin/AdminFleetManager'; 
 import AdminReservations from '@/pages/admin/AdminReservations';
 import AdminDetalhesReserva from '@/pages/admin/AdminDetalhesReserva';
@@ -153,7 +153,7 @@ function App() {
                   <Route element={<AdminOnlyGuard />}>
                     <Route index element={<AdminDashboard />} />
                     <Route path="usuarios" element={<AdminUsers />} />
-                    <Route path="carros" element={<AdminCars />} />
+                    {/* <Route path="carros" element={<AdminCars />} /> */}
                     <Route path="frota" element={<AdminFleetManager />} />
                     <Route path="precos-carros" element={<AdminCarPricing />} />
                     <Route path="carros-destaque" element={<AdminCarrosDestaque />} />

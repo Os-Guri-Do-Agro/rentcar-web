@@ -85,7 +85,7 @@ const Register = () => {
             senha: formData.password,
             nome: formData.nome,
             cpf: strip(formData.cpf),
-            telefone: strip(formData.phone),
+            telefone: '55' + strip(formData.phone),
             aceitouTermos: true
         }
       await authService.postRegister(data);

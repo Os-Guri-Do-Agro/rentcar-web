@@ -21,8 +21,8 @@ const STATUS_CONFIG = {
   cancelada:  { label: 'Cancelada',  color: 'bg-red-100 text-red-800 border-red-200' },
 };
 
-const MAX_DOC = 3;
 const MAX_FILE_MB = 10;
+const MAX_FOTO_MB = 5;
 
 const isImageUrl = (url = '', nome = '') => {
   const s = (url + nome).toLowerCase();
@@ -46,6 +46,7 @@ const AdminDetalhesReserva = () => {
   const [horaRetirada, setHoraRetirada] = useState('');
   const [horaDevolucao, setHoraDevolucao] = useState('');
   const [modals, setModals] = useState({ aprovar: false, confirmar: false, rejeitar: false, cancelar: false });
+  const [docUploadModal, setDocUploadModal] = useState({ open: false, tipo: 'documento_admin', file: null });
   const [expanded, setExpanded] = useState({ documentos: true, retirada: false, devolucao: false });
 
   // File input refs
@@ -58,19 +59,24 @@ const AdminDetalhesReserva = () => {
 
   const fetchData = async () => {
     try {
-      const [resData, histData, docsData, fotosData] = await Promise.all([
+      const [resData, histData] = await Promise.all([
         reservasServices.getReservasById(reservaId),
         reservasServices.getHostoryReserva(reservaId),
-        documentosService.getDocumentosByReservaId(reservaId),
-        reservasServices.getReservaFotos(reservaId),
       ]);
       const r = resData?.reserva ?? resData?.data ?? resData;
       setReserva(r);
       setHoraRetirada(r?.hora_retirada_solicitada || '');
       setHoraDevolucao(r?.hora_devolucao || '');
       setHistorico(histData?.data ?? []);
-      setDocumentos(docsData?.data?.documentos ?? []);
-      setFotos(fotosData?.data ?? []);
+      setDocumentos((r?.reserva_documentos ?? []).map(d => ({
+        id: d.id,
+        tipo: d.tipo_documento,
+        nome: d.arquivo_nome,
+        url: d.url_documento,
+        tamanho: d.arquivo_tamanho,
+        data_upload: d.created_at,
+      })));
+      setFotos(r?.reserva_fotos ?? []);
     } catch {
       toast({ title: 'Erro', description: 'Falha ao carregar detalhes.', variant: 'destructive' });
     } finally {
@@ -78,9 +84,29 @@ const AdminDetalhesReserva = () => {
     }
   };
 
-  const reloadFotos = async () => {
-    const fotosData = await reservasServices.getReservaFotos(reservaId);
-    setFotos(fotosData?.data ?? []);
+
+  const handleDocUploadModal = async () => {
+    const { file, tipo } = docUploadModal;
+    if (!file) return;
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      toast({ title: `"${file.name}" excede ${MAX_FILE_MB}MB.`, variant: 'destructive', className: 'bg-white text-gray-900' });
+      return;
+    }
+
+    setUploadingFotos(prev => ({ ...prev, retirada: true }));
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tipo', tipo);
+      await documentosService.postDocumentsUpload(reservaId, formData);
+      toast({ title: 'Documento enviado!', className: 'bg-green-600 text-white' });
+      setDocUploadModal({ open: false, tipo: 'documento_admin', file: null });
+      await fetchData();
+    } catch (error) {
+      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive', className: 'bg-white text-gray-900' });
+    } finally {
+      setUploadingFotos(prev => ({ ...prev, retirada: false }));
+    }
   };
 
   const closeModal = () => setModals({ aprovar: false, confirmar: false, rejeitar: false, cancelar: false });
@@ -93,7 +119,7 @@ const AdminDetalhesReserva = () => {
       toast({ title: 'Reserva aprovada!', className: 'bg-green-600 text-white' });
       closeModal(); fetchData();
     } catch (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro', description: error.message, variant: 'destructive', className: 'bg-white text-gray-900' });
     } finally { setProcessing(false); }
   };
 
@@ -107,7 +133,7 @@ const AdminDetalhesReserva = () => {
       toast({ title: 'Reserva confirmada!', className: 'bg-green-600 text-white' });
       closeModal(); fetchData();
     } catch (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro', description: error.message, variant: 'destructive', className: 'bg-white text-gray-900' });
     } finally { setProcessing(false); }
   };
 
@@ -118,7 +144,7 @@ const AdminDetalhesReserva = () => {
       toast({ title: 'Reserva rejeitada.', className: 'bg-red-600 text-white' });
       closeModal(); setMotivo(''); fetchData();
     } catch (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro', description: error.message, variant: 'destructive', className: 'bg-white text-gray-900' });
     } finally { setProcessing(false); }
   };
 
@@ -129,7 +155,7 @@ const AdminDetalhesReserva = () => {
       toast({ title: 'Reserva cancelada.', className: 'bg-red-600 text-white' });
       closeModal(); fetchData();
     } catch (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro', description: error.message, variant: 'destructive', className: 'bg-white text-gray-900' });
     } finally { setProcessing(false); }
   };
 
@@ -140,15 +166,15 @@ const AdminDetalhesReserva = () => {
       await reservasServices.postReservaEnviarEmail(reservaId);
       toast({ title: 'E-mail enviado!', description: 'Cópia dos documentos enviada ao cliente.', className: 'bg-green-600 text-white' });
     } catch (error) {
-      toast({ title: 'Erro ao enviar e-mail', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao enviar e-mail', description: error.message, variant: 'destructive', className: 'bg-white text-gray-900' });
     } finally { setSendingEmail(false); }
   };
 
   // --- Fotos upload ---
   const handleUploadFotos = async (tipo, files) => {
     const valid = Array.from(files).filter(f => {
-      if (f.size > MAX_FILE_MB * 1024 * 1024) {
-        toast({ title: `"${f.name}" excede ${MAX_FILE_MB}MB e foi ignorado.`, variant: 'destructive' });
+      if (f.size > MAX_FOTO_MB * 1024 * 1024) {
+        toast({ title: `"${f.name}" excede ${MAX_FOTO_MB}MB e foi ignorado.`, variant: 'destructive', className: 'bg-white text-gray-900' });
         return false;
       }
       return true;
@@ -161,48 +187,39 @@ const AdminDetalhesReserva = () => {
       valid.forEach(f => formData.append('files', f));
       await reservasServices.postReservaFotos(reservaId, tipo, formData);
       toast({ title: 'Arquivos enviados!', className: 'bg-green-600 text-white' });
-      await reloadFotos();
+      await fetchData();
     } catch (error) {
-      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive', className: 'bg-white text-gray-900' });
     } finally {
       setUploadingFotos(prev => ({ ...prev, [tipo]: false }));
     }
   };
 
-  const handleDocUpload = (tipo, files, currentDocs) => {
-    const newFiles = Array.from(files);
-    if (currentDocs.length + newFiles.length > MAX_DOC) {
-      toast({ title: `Limite de ${MAX_DOC} documentos por seção atingido.`, variant: 'destructive' });
-      return;
-    }
-    handleUploadFotos(tipo, newFiles);
+  const handleDocUpload = (tipo, files) => {
+    handleUploadFotos(tipo, Array.from(files));
   };
 
-  const handleDocUploadRetirada = async (files, currentDocs) => {
+  const handleDocUploadRetirada = async (files) => {
     const newFiles = Array.from(files).filter(f => {
       if (f.size > MAX_FILE_MB * 1024 * 1024) {
-        toast({ title: `"${f.name}" excede ${MAX_FILE_MB}MB e foi ignorado.`, variant: 'destructive' });
+        toast({ title: `"${f.name}" excede ${MAX_FILE_MB}MB e foi ignorado.`, variant: 'destructive', className: 'bg-white text-gray-900' });
         return false;
       }
       return true;
     });
     if (!newFiles.length) return;
-    if (currentDocs.length + newFiles.length > MAX_DOC) {
-      toast({ title: `Limite de ${MAX_DOC} documentos atingido.`, variant: 'destructive' });
-      return;
-    }
     setUploadingFotos(prev => ({ ...prev, retirada: true }));
     try {
       for (const file of newFiles) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('tipo', 'documento_retirada');
+        formData.append('tipo', 'documento_admin');
         await documentosService.postDocumentsUpload(reservaId, formData);
       }
       toast({ title: 'Documento(s) enviado(s)!', className: 'bg-green-600 text-white' });
-      await reloadFotos();
+      await fetchData();
     } catch (error) {
-      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro no upload', description: error.message, variant: 'destructive', className: 'bg-white text-gray-900' });
     } finally {
       setUploadingFotos(prev => ({ ...prev, retirada: false }));
     }
@@ -221,6 +238,10 @@ const AdminDetalhesReserva = () => {
     reserva.hora_retirada_solicitada &&
     reserva.hora_retirada &&
     reserva.hora_retirada !== reserva.hora_retirada_solicitada;
+
+  const docsFromDocumentos = documentos
+    .filter(d => d.tipo === 'documento_admin')
+    .map(d => ({ ...d, nome_arquivo: d.nome }));
 
   const fotosRetirada = fotos.filter(f => f.tipo === 'retirada' || f.tipo === 'documento_retirada');
   const fotosDevolucao = fotos.filter(f => f.tipo === 'devolucao');
@@ -257,7 +278,7 @@ const AdminDetalhesReserva = () => {
       )
   );
 
-  const renderAnexosSection = (tipo, fotosList, docsList, imgRef, docRef, isUploading, expandKey, allowDocs = true, onDocUpload = null) => (
+  const renderAnexosSection = (tipo, fotosList, docsList, imgRef, docRef, isUploading, expandKey, allowDocs = true, onDocUpload = null, onDocButtonClick = null, extraDocs = []) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
       <button
         onClick={() => setExpanded(p => ({ ...p, [expandKey]: !p[expandKey] }))}
@@ -267,7 +288,7 @@ const AdminDetalhesReserva = () => {
           <Image size={18} className="text-[#00D166]" />
           Anexos de {tipo === 'retirada' ? 'Retirada' : 'Devolução'}
           <span className="text-xs font-normal text-gray-400 ml-1">
-            ({fotosList.length} {fotosList.length === 1 ? 'arquivo' : 'arquivos'})
+            ({fotosList.length + extraDocs.length} {fotosList.length + extraDocs.length === 1 ? 'arquivo' : 'arquivos'})
           </span>
         </h2>
         {expanded[expandKey] ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
@@ -281,7 +302,7 @@ const AdminDetalhesReserva = () => {
               ref={imgRef}
               type="file"
               multiple
-              accept="image/*"
+              accept="image/png,image/jpeg"
               className="hidden"
               onChange={e => { handleUploadFotos(tipo, e.target.files); e.target.value = ''; }}
             />
@@ -294,43 +315,59 @@ const AdminDetalhesReserva = () => {
               Adicionar Fotos
             </button>
 
-            {/* Enviar email — retirada only, quando há arquivos */}
-            {allowDocs && fotosList.length > 0 && (
-              <button
-                onClick={handleEnviarEmail}
-                disabled={sendingEmail}
-                className="flex items-center gap-2 px-3 py-2 bg-[#0E3A2F] hover:bg-[#165945] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {sendingEmail ? <Loader2 className="animate-spin" size={15} /> : <Send size={15} />}
-                Enviar Contrato por E-mail
-              </button>
-            )}
-
-            {/* Document upload (max 3) — retirada only */}
             {allowDocs && (
               <>
                 <input
                   ref={docRef}
                   type="file"
                   multiple
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf"
                   className="hidden"
                   onChange={e => { (onDocUpload ?? ((f, d) => handleDocUpload(tipo, f, d)))(e.target.files, docsList); e.target.value = ''; }}
                 />
                 <button
-                  onClick={() => docRef.current?.click()}
-                  disabled={isUploading || docsList.length >= MAX_DOC}
-                  title={docsList.length >= MAX_DOC ? `Limite de ${MAX_DOC} documentos atingido` : undefined}
+                  onClick={() => onDocButtonClick ? onDocButtonClick() : docRef.current?.click()}
+                  disabled={isUploading}
                   className="flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-sm font-medium hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Paperclip size={15} />
-                  Documentos ({docsList.length}/{MAX_DOC})
+                  Documentos
                 </button>
               </>
+            )}
+
+                        {/* Enviar email — retirada only, quando há arquivos */}
+                        {allowDocs && (fotosList.length + extraDocs.length) > 0 && (
+              <button
+                onClick={handleEnviarEmail}
+                disabled={sendingEmail}
+                className="flex items-center gap-2 px-3 py-2 bg-[#0E3A2F] hover:bg-[#165945] text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {sendingEmail ? <Loader2 className="animate-spin" size={15} /> : <Send size={15} />}
+                Enviar Documentos por E-mail
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3 mb-4">
+            <span className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5">
+              <Image size={13} className="shrink-0" />
+              Fotos: PNG ou JPEG · Máx. 5MB
+            </span>
+            {allowDocs && (
+              <span className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                <Paperclip size={13} className="shrink-0" />
+                Documentos: apenas PDF · Máx. {MAX_FILE_MB}MB
+              </span>
             )}
           </div>
 
           {renderFotoGrid(fotosList)}
+          {extraDocs.length > 0 && (
+            <div className="mt-4">
+              <DocumentosDisplay documentos={extraDocs} reservaId={reservaId} />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -499,7 +536,7 @@ const AdminDetalhesReserva = () => {
 
             {expanded.documentos && (
               <div className="p-5">
-                <DocumentosDisplay documentos={documentos} />
+                <DocumentosDisplay documentos={documentos.filter(d => d.tipo !== 'documento_admin')} reservaId={reservaId} />
               </div>
             )}
           </div>
@@ -514,7 +551,9 @@ const AdminDetalhesReserva = () => {
             uploadingFotos.retirada,
             'retirada',
             true,
-            (files) => handleDocUploadRetirada(files, docsRetirada)
+            (files) => handleDocUploadRetirada(files),
+          () => setDocUploadModal({ open: true, tipo: 'documento_admin', file: null }),
+          docsFromDocumentos
           )}
 
           {/* Anexos de Devolução */}
@@ -654,6 +693,93 @@ const AdminDetalhesReserva = () => {
             <button onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
             <button onClick={handleRejeitar} disabled={processing || !motivo.trim()} className="px-4 py-2 bg-red-600 text-white rounded-lg font-bold flex items-center gap-2 disabled:opacity-40">
               {processing ? <Loader2 className="animate-spin" size={16} /> : <XCircle size={16} />} Rejeitar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Upload Documento Retirada */}
+      <Dialog open={docUploadModal.open} onOpenChange={(o) => !o && setDocUploadModal({ open: false, tipo: 'documento_admin', file: null })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-[#0E3A2F]">
+              <div className="w-9 h-9 rounded-xl bg-[#0E3A2F] flex items-center justify-center shrink-0">
+                <Paperclip size={17} className="text-white" />
+              </div>
+              Adicionar Documento
+            </DialogTitle>
+            <DialogDescription>Selecione o tipo e anexe o arquivo PDF.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-1">
+            {/* Tipo */}
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Tipo de Documento</p>
+              <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-[#0E3A2F] bg-[#0E3A2F]/5">
+                <div className="w-8 h-8 rounded-lg bg-[#0E3A2F] flex items-center justify-center shrink-0">
+                  <FileText size={15} className="text-white" />
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-[#0E3A2F]">Documento Admin</span>
+                  <p className="text-xs text-gray-400">Contrato, checklist, termos...</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Upload */}
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Arquivo PDF</p>
+              <label className={`flex flex-col items-center justify-center gap-3 w-full rounded-xl border-2 border-dashed cursor-pointer transition-all p-6 ${
+                docUploadModal.file
+                  ? 'border-[#00D166] bg-green-50'
+                  : 'border-gray-200 bg-gray-50 hover:border-[#0E3A2F] hover:bg-[#0E3A2F]/5'
+              }`}>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  className="hidden"
+                  onChange={e => setDocUploadModal(prev => ({ ...prev, file: e.target.files[0] || null }))}
+                />
+                {docUploadModal.file ? (
+                  <>
+                    <div className="w-10 h-10 rounded-xl bg-[#00D166] flex items-center justify-center">
+                      <FileText size={20} className="text-white" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-[#0E3A2F] truncate max-w-[240px]">{docUploadModal.file.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{(docUploadModal.file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <span className="text-xs text-[#0E3A2F] font-semibold underline underline-offset-2">Trocar arquivo</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center">
+                      <Paperclip size={20} className="text-gray-500" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-700">Clique para selecionar</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Somente PDF · Máx. {MAX_FILE_MB}MB</p>
+                    </div>
+                  </>
+                )}
+              </label>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 mt-2">
+            <button
+              onClick={() => setDocUploadModal({ open: false, tipo: 'documento_admin', file: null })}
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDocUploadModal}
+              disabled={!docUploadModal.file || uploadingFotos.retirada}
+              className="flex items-center justify-center gap-2 px-5 py-2 bg-[#0E3A2F] hover:bg-[#165945] text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {uploadingFotos.retirada ? <Loader2 className="animate-spin" size={15} /> : <Paperclip size={15} />}
+              Enviar Documento
             </button>
           </DialogFooter>
         </DialogContent>

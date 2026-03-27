@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 // Services
 import reservasService from '@/services/reservas/reservas-services';
 import userService from '@/services/user/userService';
+import { validatePDFFile } from '@/lib/validationUtils';
 
 // Mapeia chave interna → tipo aceito pela API
 const DOC_TYPE_MAP = {
@@ -87,7 +88,7 @@ const Documentos = () => {
     }
 
     if (!dados?.reserva?.valorTotal) {
-         toast({ title: "Erro de Dados", description: "Dados da reserva incompletos. Redirecionando...", variant: "destructive" });
+         toast({ title: "Erro de Dados", description: "Dados da reserva incompletos. Redirecionando...", variant: "destructive", className: "bg-white text-gray-900" });
          navigate('/frota');
          return;
     }
@@ -129,12 +130,16 @@ const Documentos = () => {
   // --- 2. Handlers ---
 
   const handleFileSelect = (file, type) => {
-    if (file) {
-        setFilesData(prev => ({
-            ...prev,
-            [type]: { file: file, status: 'idle', error: null }
-        }));
+    if (!file) return;
+    const validation = type === 'comprovante_trabalho' ? { valid: true } : validatePDFFile(file);
+    if (!validation.valid) {
+      toast({ title: 'Arquivo inválido', description: validation.error, variant: 'destructive', className: 'bg-white text-gray-900' });
+      return;
     }
+    setFilesData(prev => ({
+      ...prev,
+      [type]: { file, status: 'idle', error: null }
+    }));
   };
 
   const validateAllFields = () => {
@@ -163,7 +168,7 @@ const Documentos = () => {
       }
 
       if (!validateAllFields()) {
-          toast({ title: "Atenção", description: "Preencha todos os campos obrigatórios em vermelho.", variant: "destructive" });
+          toast({ title: "Atenção", description: "Preencha todos os campos obrigatórios em vermelho.", variant: "destructive", className: "bg-white text-gray-900" });
           window.scrollTo({ top: 0, behavior: 'smooth' });
           return;
       }
@@ -179,7 +184,8 @@ const Documentos = () => {
           toast({ 
               title: "Documentos Faltando", 
               description: `Por favor, anexe: ${missingFiles.join(', ')}.`, 
-              variant: "destructive" 
+              variant: "destructive",
+              className: "bg-white text-gray-900"
           });
           return;
       }
@@ -219,7 +225,7 @@ const Documentos = () => {
         const usuarioPayload = {
             nome:                 formData.nome,
             email:                formData.email,
-            telefone:             strip(formData.telefone),
+            telefone:             '55' + strip(formData.telefone),
             data_nascimento:      formData.data_nascimento,
             cpf:                  strip(formData.cpf),
             cnpj:                 strip(formData.cnpj),
@@ -251,7 +257,7 @@ const Documentos = () => {
 
     } catch (error) {
         console.error('[Documentos] ERRO FATAL:', error);
-        toast({ title: "Atenção", description: error.message || "Ocorreu um erro no processo.", variant: "destructive" });
+        toast({ title: "Atenção", description: error.message || "Ocorreu um erro no processo.", variant: "destructive", className: "bg-white text-gray-900" });
     } finally {
         setIsSubmitting(false);
     }

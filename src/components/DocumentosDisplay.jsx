@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { FileText, Download, Eye, AlertCircle, Home, Wallet, CreditCard, AlertTriangle, Loader2 } from 'lucide-react';
 import { formatarTamanhoArquivo } from '@/lib/validationUtils';
 import { cn } from '@/lib/utils';
-import reservasServices from '@/services/reservas/reservas-services';
+import documentosService from '@/services/reservas/documentos/documentos-service';
 
 const getDocumentConfig = (type) => {
     switch (type) {
         case 'cnh':
             return { label: 'CNH', color: 'blue', icon: Wallet, bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' };
+        case 'cnh_responsavel':
+            return { label: 'CNH do Responsável', color: 'blue', icon: Wallet, bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' };
         case 'cpf':
             return { label: 'CPF', color: 'green', icon: CreditCard, bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' };
         case 'rg':
@@ -16,6 +18,12 @@ const getDocumentConfig = (type) => {
             return { label: 'Comprovante Residência', color: 'orange', icon: Home, bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' };
         case 'historico_criminal':
             return { label: 'Histórico Criminal', color: 'red', icon: AlertTriangle, bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
+        case 'comprovante_trabalho_plataforma':
+            return { label: 'Comprovante de Trabalho', color: 'orange', icon: FileText, bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' };
+        case 'cnpj':
+            return { label: 'CNPJ', color: 'purple', icon: CreditCard, bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' };
+        case 'documento_admin':
+            return { label: 'Documento Admin', color: 'green', icon: FileText, bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' };
         default:
             return { label: type, color: 'gray', icon: FileText, bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
     }
@@ -28,7 +36,7 @@ const DocumentosDisplay = ({ documentos = [], reservaId, className }) => {
         if (!reservaId || !doc.id) return;
         setDownloading(doc.id);
         try {
-            const blob = await reservasServices.getDowloadDocumento(reservaId, doc.id);
+            const blob = await documentosService.getDocumentosDownload(reservaId, doc.id);
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;

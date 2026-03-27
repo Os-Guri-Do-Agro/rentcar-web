@@ -61,7 +61,7 @@ const AdminTermsAndRules = () => {
         if (id) await termosService.patchTermo(id, payload);
         else await termosService.postTermo(payload);
       }
-      toast({ title: 'Salvo com sucesso!' });
+      toast({ title: 'Salvo com sucesso!', className: 'bg-green-600 text-white border-none' });
       setEditModal({ open: false, type: null, item: null });
       fetchData();
     } catch (error) {
@@ -82,7 +82,7 @@ const AdminTermsAndRules = () => {
     try {
       if (deleteModal.type === 'regras') await regrasService.deleteRegras(deleteModal.id);
       else await termosService.deleteTermo(deleteModal.id);
-      toast({ title: 'Item excluído' });
+      toast({ title: 'Item excluído', className: 'bg-green-600 text-white border-none' });
       setDeleteModal({ open: false, type: null, id: null, titulo: '' });
       fetchData();
     } catch (error) {

@@ -57,7 +57,7 @@ const AdminSecoes = () => {
         setSaving(true);
         try {
             await sectionHomeService.patchHomeSectionById(selectedSection.slug, sectionForm);
-            toast({ title: "Seção atualizada!" });
+            toast({ title: "Seção atualizada!", className: "bg-green-600 text-white border-none" });
             setEditSectionModal(false);
             loadData();
         } catch (error) {
@@ -96,7 +96,7 @@ const AdminSecoes = () => {
             await sectionHomeService.deleteHomeSecionCardSlug(selectedSection.slug, cardToDelete.id);
             const updatedCards = selectedSection.cards.filter(c => c.id !== cardToDelete.id);
             setSelectedSection({ ...selectedSection, cards: updatedCards });
-            toast({ title: "Card removido!" });
+            toast({ title: "Card removido!", className: "bg-green-600 text-white border-none" });
             setDeleteCardModal(false);
             loadData();
         } catch (error) {
@@ -116,14 +116,14 @@ const AdminSecoes = () => {
                 );
             } else {
                 await sectionHomeService.postHomeSectionCard(selectedSection.slug, cardForm);
-                toast({ title: "Card salvo!" });
+                toast({ title: "Card salvo!", className: "bg-green-600 text-white border-none" });
                 setEditCardModal(false);
                 setManageCardsModal(false);
                 loadData();
                 return;
             }
             await sectionHomeService.patchHomeSectionById(selectedSection.slug, { cards: updatedCards });
-            toast({ title: "Card salvo!" });
+            toast({ title: "Card salvo!", className: "bg-green-600 text-white border-none" });
             setEditCardModal(false);
             setManageCardsModal(false);
             loadData();

@@ -102,7 +102,7 @@ const AdminBlog = () => {
   const handleDelete = async () => {
     try {
       await blogService.deleteBlogById(deleteId);
-      toast({ title: 'Post excluído' });
+      toast({ title: 'Post excluído', className: 'bg-green-600 text-white border-none' });
       fetchPosts();
     } catch {
       toast({ title: 'Erro ao excluir', variant: 'destructive' });
@@ -115,7 +115,7 @@ const AdminBlog = () => {
     try {
       await blogService.patchBlogToggle(post.id, post.ativo);
       fetchPosts();
-      toast({ title: post.ativo ? 'Post desativado' : 'Post ativado' });
+      toast({ title: post.ativo ? 'Post desativado' : 'Post ativado', className: 'bg-green-600 text-white border-none' });
     } catch {
       toast({ title: 'Erro ao alterar status', variant: 'destructive' });
     }
@@ -125,7 +125,7 @@ const AdminBlog = () => {
     try {
       await categoriaBlogService.patchCategoriaBlogToggle(cat.id, cat.ativo);
       fetchCategorias();
-      toast({ title: cat.ativo ? 'Categoria desativada' : 'Categoria ativada' });
+      toast({ title: cat.ativo ? 'Categoria desativada' : 'Categoria ativada', className: 'bg-green-600 text-white border-none' });
     } catch {
       toast({ title: 'Erro ao alterar status', variant: 'destructive' });
     }
@@ -134,7 +134,7 @@ const AdminBlog = () => {
   const handleDeleteCategoria = async () => {
     try {
       await categoriaBlogService.deleteCategoriaBlogById(deleteCatId);
-      toast({ title: 'Categoria excluída' });
+      toast({ title: 'Categoria excluída', className: 'bg-green-600 text-white border-none' });
       fetchCategorias();
     } catch {
       toast({ title: 'Erro ao excluir categoria', variant: 'destructive' });

@@ -62,7 +62,7 @@ const AdminAvaliacoes = () => {
                 const tempUrl = URL.createObjectURL(file);
                 setForm(prev => ({ ...prev, foto_cliente_url: tempUrl, _photoFile: file }));
             }
-            toast({ title: "Foto enviada com sucesso!" });
+            toast({ title: "Foto enviada com sucesso!", className: "bg-green-600 text-white border-none" });
         } catch (error) {
             toast({ title: "Erro ao enviar foto", variant: "destructive" });
         } finally {
@@ -108,7 +108,7 @@ const AdminAvaliacoes = () => {
     const handleDelete = async () => {
         try {
             await avaliacoesService.deleteAvaliacoesById(deleteId);
-            toast({ title: "Avaliação excluída" });
+            toast({ title: "Avaliação excluída", className: "bg-green-600 text-white border-none" });
             fetchReviews();
         } catch (e) {
             toast({ title: "Erro ao excluir", variant: "destructive" });
@@ -121,7 +121,7 @@ const AdminAvaliacoes = () => {
         try {
             await avaliacoesService.patchAvaliacoes(id, { ativo: !status });
             fetchReviews();
-            toast({ title: status ? "Avaliação desativada" : "Avaliação ativada" });
+            toast({ title: status ? "Avaliação desativada" : "Avaliação ativada", className: "bg-green-600 text-white border-none" });
         } catch (e) {
             toast({ title: "Erro ao alterar status", variant: "destructive" });
         }

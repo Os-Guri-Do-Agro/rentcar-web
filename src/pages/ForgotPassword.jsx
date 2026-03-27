@@ -6,6 +6,7 @@ import { Mail, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-reac
 import { useToast } from '@/components/ui/use-toast';
 import { sendPasswordRecoveryEmail } from '@/services/authService';
 import { isValidEmail } from '@/lib/validationUtils';
+import authService from '@/services/auth/auth-service';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -32,7 +33,7 @@ const ForgotPassword = () => {
     setIsSubmitting(true);
 
     try {
-      const result = await sendPasswordRecoveryEmail(email);
+      const result = await authService.postEsqueceuSenha({email});
 
       if (result.success) {
         setIsSuccess(true);
@@ -47,6 +48,7 @@ const ForgotPassword = () => {
           title: "Erro",
           description: result.error,
           variant: "destructive",
+          className: "bg-red-600 text-white"
         });
       }
     } catch (err) {

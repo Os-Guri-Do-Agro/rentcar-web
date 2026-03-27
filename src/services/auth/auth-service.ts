@@ -44,6 +44,27 @@ class authService {
     )
   }
 
+  postEsqueceuSenha(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/auth/esqueceu-senha', data),
+      'Erro ao solicitar redefinição de senha'
+    )
+  }
+
+  postVerificarCodigo(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/auth/verificar-codigo', data),
+      'Erro ao verificar código'
+    )
+  }
+
+  postRedefinirSenha(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/auth/redefinir-senha', data),
+      'Erro ao redefinir senha'
+    )
+  }
+
 }
 
 export default new authService()
