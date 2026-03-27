@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import UnderlineExtension from '@tiptap/extension-underline';
@@ -20,7 +20,7 @@ const ToolbarBtn = ({ onMouseDown, active, title, children }) => (
 
 const Divider = () => <div className="w-px h-5 bg-gray-300 mx-1 self-center" />;
 
-const TiptapEditor = ({ value, onChange, minHeight = '16rem' }) => {
+const TiptapEditor = forwardRef(({ value, onChange, minHeight = '16rem' }, ref) => {
   const [, forceUpdate] = useState(0);
 
   const editor = useEditor({
@@ -29,6 +29,17 @@ const TiptapEditor = ({ value, onChange, minHeight = '16rem' }) => {
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     onTransaction: () => forceUpdate(n => n + 1),
   });
+
+  useImperativeHandle(ref, () => ({
+    insertText: (text) => {
+      if (!editor) return;
+      editor.chain().focus().insertContent(text).run();
+    },
+    setContent: (html) => {
+      if (!editor) return;
+      editor.commands.setContent(html || '');
+    },
+  }));
 
   if (!editor) return null;
 
@@ -66,6 +77,6 @@ const TiptapEditor = ({ value, onChange, minHeight = '16rem' }) => {
       />
     </div>
   );
-};
+});
 
 export default TiptapEditor;

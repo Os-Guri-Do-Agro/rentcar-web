@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import carService from '@/services/cars/carService';
 import { useToast } from '@/components/ui/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const FleetManagement = () => {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const { toast } = useToast();
 
   const loadCars = async () => {
@@ -24,15 +26,19 @@ const FleetManagement = () => {
     loadCars();
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Tem certeza que deseja excluir este veículo?")) return;
-    
+  const handleDelete = (id) => {
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async () => {
     try {
-      await carService.deleteCarById(id);
-      setCars(cars.filter(c => c.id !== id));
-      toast({ title: "Veículo excluído com sucesso" });
+      await carService.deleteCarById(deleteConfirmId);
+      setCars(cars.filter(c => c.id !== deleteConfirmId));
+      toast({ title: "Veículo excluído com sucesso", className: "bg-green-600 text-white border-none" });
     } catch (error) {
       toast({ title: "Erro ao excluir", variant: "destructive" });
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -41,7 +47,7 @@ const FleetManagement = () => {
       const res = await carService.patchCarById(car.id, { disponivel: !car.disponivel });
       const updated = res?.data ?? res;
       setCars(cars.map(c => c.id === car.id ? updated : c));
-      toast({ title: `Veículo ${!car.disponivel ? 'ativado' : 'desativado'}` });
+      toast({ title: `Veículo ${!car.disponivel ? 'ativado' : 'desativado'}`, className: "bg-green-600 text-white border-none" });
     } catch (error) {
       toast({ title: "Erro ao atualizar status", variant: "destructive" });
     }
@@ -51,6 +57,18 @@ const FleetManagement = () => {
 
   return (
     <div>
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(o) => !o && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir veículo?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. O veículo será removido permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-[#0E3A2F]">Gestão de Frota</h1>
         <Link 

@@ -251,7 +251,7 @@ const UserProfile = () => {
               setContactEditing(false);
               setFormData(prev => ({ ...prev, telefone: userInfo.telefone }));
             }}
-            onSave={() => handleUpdate('contact', { telefone: formData.telefone })}
+            onSave={() => handleUpdate('contact', { telefone: '55' + formData.telefone.replace(/\D/g, '') })}
             loading={loading}
           >
             <InputGroup 

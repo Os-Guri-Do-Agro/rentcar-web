@@ -7,6 +7,7 @@ import { validatePDFFile, validateImageFile } from '@/lib/validationUtils';
 export const DocumentDropzone = ({ onUpload, loading, error, success, label, documentType, acceptImage = false }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [validationError, setValidationError] = useState(null);
   const inputRef = useRef(null);
 
   const handleDrag = (e) => {
@@ -39,13 +40,10 @@ export const DocumentDropzone = ({ onUpload, loading, error, success, label, doc
   const handleFileSelection = (file) => {
     const validation = acceptImage ? validateImageFile(file) : validatePDFFile(file);
     if (!validation.valid) {
-       // We can trigger an external toast or handle error state here
-       // For now, let's use the error prop pattern or a local alert if needed
-       // But typically the parent handles the upload logic and sets error prop
-       alert(validation.error); // Simple feedback for immediate interaction
-       return; 
+      setValidationError(validation.error);
+      return;
     }
-    
+    setValidationError(null);
     setSelectedFile(file);
     onUpload(file, documentType);
   };
@@ -79,8 +77,8 @@ export const DocumentDropzone = ({ onUpload, loading, error, success, label, doc
                 "relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-all duration-200 group h-40",
                 loading && "bg-gray-50 border-gray-300 cursor-wait",
                 success && "bg-green-50 border-[#00D166] cursor-default opacity-80",
-                error && "bg-red-50 border-red-300 cursor-pointer",
-                !loading && !success && !error && (isDragging ? "border-[#00D166] bg-green-50 scale-[1.01]" : "border-gray-200 hover:border-[#00D166] hover:bg-gray-50 bg-white cursor-pointer")
+                (error || validationError) && "bg-red-50 border-red-300 cursor-pointer",
+                !loading && !success && !error && !validationError && (isDragging ? "border-[#00D166] bg-green-50 scale-[1.01]" : "border-gray-200 hover:border-[#00D166] hover:bg-gray-50 bg-white cursor-pointer")
             )}
         >
             <input 
@@ -104,6 +102,13 @@ export const DocumentDropzone = ({ onUpload, loading, error, success, label, doc
                     </div>
                     <p className="font-bold text-[#0E3A2F] text-sm">{selectedFile?.name || "Arquivo Enviado"}</p>
                     <p className="text-xs text-gray-500">{fileSize > 0 ? `${fileSize} MB` : ''}</p>
+                </div>
+            ) : validationError ? (
+                <div className="flex flex-col items-center text-center animate-in shake">
+                    <AlertCircle className="text-red-500 mb-2" size={32} />
+                    <p className="font-bold text-red-600 text-sm">Arquivo inválido</p>
+                    <p className="text-xs text-red-500 mt-1 max-w-[200px]">{validationError}</p>
+                    <button onClick={() => setValidationError(null)} className="mt-2 text-xs font-bold underline text-red-400">Tentar novamente</button>
                 </div>
             ) : error ? (
                 <div className="flex flex-col items-center text-center animate-in shake">

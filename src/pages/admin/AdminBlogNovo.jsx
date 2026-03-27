@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import blogService from '@/services/blog/blog-service';
 import BlogForm from '@/components/admin/BlogForm';
 
-const EMPTY_FORM = { titulo: '', subTitulo: '', conteudo: '', conclusao: '', ativo: true };
+const EMPTY_FORM = { titulo: '', subTitulo: '', conteudo: '', conclusao: '', ativo: true, categoriaBlogId: '' };
 
 const AdminBlogNovo = () => {
   const navigate = useNavigate();
@@ -19,6 +19,11 @@ const AdminBlogNovo = () => {
   const handlePhoto = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Imagem muito grande', description: 'O tamanho máximo permitido é 5MB.', variant: 'destructive' });
+      e.target.value = '';
+      return;
+    }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
   };

@@ -46,7 +46,7 @@ const PriceControl = () => {
 
     try {
       await updateCarPrice(car.id, newPrice, car.preco_diaria);
-      toast({ title: "Preço atualizado com sucesso" });
+      toast({ title: "Preço atualizado com sucesso", className: "bg-green-600 text-white border-none" });
       loadData(); // Reload to refresh history and base state
     } catch (error) {
       toast({ title: "Erro ao atualizar preço", variant: "destructive" });

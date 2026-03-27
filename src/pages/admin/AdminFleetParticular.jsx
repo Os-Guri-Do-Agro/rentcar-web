@@ -4,10 +4,12 @@ import { supabase } from '@/lib/supabaseClient';
 import { Loader2, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import carService from '@/services/cars/carService';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const AdminFleetParticular = () => {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const { toast } = useToast();
 
   const fetchCars = async () => {
@@ -33,25 +35,42 @@ const AdminFleetParticular = () => {
       .channel('admin-cars-particular')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cars', filter: "tipo_frota=eq.particular" }, () => {
         fetchCars();
-        toast({ title: "Atualizado", description: "Lista atualizada em tempo real." });
+        toast({ title: "Atualizado", description: "Lista atualizada em tempo real.", className: "bg-blue-600 text-white border-none" });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Excluir este veículo?")) return;
+  const handleDelete = (id) => {
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async () => {
     try {
-      await carService.deleteCarById(id);
-      setCars(cars.filter(c => c.id !== id));
-      toast({ title: "Carro excluído" });
+      await carService.deleteCarById(deleteConfirmId);
+      setCars(cars.filter(c => c.id !== deleteConfirmId));
+      toast({ title: "Carro excluído", className: "bg-green-600 text-white border-none" });
     } catch (e) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
   return (
     <div className="p-6 md:p-10 bg-gray-50 min-h-screen">
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(o) => !o && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir veículo?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. O veículo será removido permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-[#0E3A2F]">Frota Particular</h1>

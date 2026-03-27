@@ -100,7 +100,7 @@ const DadosPessoaisForm = ({ usuarioId, dadosIniciais, onSalvar }) => {
         try {
             await userService.patchUserById(usuarioId, dataToSave);
             console.log('[DadosPessoaisForm] Dados salvos no perfil');
-            toast({ title: "Sucesso", description: "Dados atualizados com sucesso!" });
+            toast({ title: "Sucesso", description: "Dados atualizados com sucesso!", className: "bg-green-600 text-white border-none" });
             if (onSalvar) onSalvar(dataToSave);
         } catch (error) {
             console.error('[DadosPessoaisForm] Exceção:', error);

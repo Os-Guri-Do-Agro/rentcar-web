@@ -27,6 +27,13 @@ class blogService {
     )
   }
 
+  getBlogPagination(title: string, categoriaId: string, page: number, limit: number): Promise<any> {
+    return this.handleRequest(
+      api.get(`/blog/pagination?title=${title}&categoriaID=${categoriaId}&page=${page}&limit=${limit}`, { headers: this.authHeader() }),
+      'Erro ao buscar blog'
+    )
+  }
+
   postBlog(data: any): Promise<any> {
     return this.handleRequest(
       api.post('/blog', data, { headers: this.authHeader() }),
@@ -77,6 +84,24 @@ class blogService {
       'Erro ao atualizar blog'
     )
   }
+
+  getBlogBanner(): Promise<any> {
+    return this.handleRequest(
+      api.get('/blog/banner', { headers: this.authHeader() }),
+      'Erro ao buscar banner do blog'
+    )
+  }
+
+  postBlogBanner(data: FormData): Promise<any> {
+    return this.handleRequest(
+      api.post('/blog/banner', data, {
+        headers: { ...this.authHeader(), 'Content-Type': 'multipart/form-data' },
+      }),
+      'Erro ao criar banner do blog'
+    )
+  }
+
+  
 }
 
 export default new blogService()

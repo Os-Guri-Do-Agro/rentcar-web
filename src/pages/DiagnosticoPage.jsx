@@ -28,7 +28,7 @@ const DiagnosticoPage = () => {
     const copyReport = () => {
         const text = JSON.stringify(report, null, 2);
         navigator.clipboard.writeText(text);
-        toast({ title: "Copiado", description: "Relatório copiado para a área de transferência." });
+        toast({ title: "Copiado", description: "Relatório copiado para a área de transferência.", className: "bg-blue-600 text-white border-none" });
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-4">

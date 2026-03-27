@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Loader2, AlertTriangle, Gauge, Users, Car, Building2 } from 'lucide-react';
+import { Loader2, AlertTriangle, Gauge, Users, Car, Building2, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DateRangeSelector from './DateRangeSelector';
 import ResumoPrecoSimulacao from './ResumoPrecoSimulacao';
@@ -41,6 +41,8 @@ const ReservaForm = ({ car }) => {
     const [dataRetirada, setDataRetirada] = useState('');
     const [dataDevolucao, setDataDevolucao] = useState('');
     const [duracaoDias, setDuracaoDias] = useState(0);
+    const [horaRetirada, setHoraRetirada] = useState('09:00');
+    const [horaDevolucao, setHoraDevolucao] = useState('09:00');
 
     // Descobre quais tipos têm planos para este carro (3 requests paralelos na montagem)
     useEffect(() => {
@@ -118,13 +120,22 @@ const ReservaForm = ({ car }) => {
         [planos, categoria, kmFranquia]
     );
 
+    // Dia extra: se horaDevolucao > horaRetirada no plano diário, cobra mais 1 dia
+    const extraDay = useMemo(() => {
+        if (categoria !== 'diario' || !horaRetirada || !horaDevolucao) return false;
+        return horaDevolucao > horaRetirada;
+    }, [categoria, horaRetirada, horaDevolucao]);
+
+    // Dias efetivos para cálculo (inclui dia extra se aplicável)
+    const diasEfetivos = duracaoDias + (extraDay ? 1 : 0);
+
     // Cálculo de preços
     const { preco, precoTotal, precoSemanal, precoMensal } = useMemo(() => {
         const base = selectedPlano ? Number(selectedPlano.preco) : 0;
         if (!base) return { preco: 0, precoTotal: 0, precoSemanal: 0, precoMensal: 0 };
 
         if (categoria === 'diario') {
-            return { preco: base, precoTotal: base * (duracaoDias || 1), precoSemanal: 0, precoMensal: 0 };
+            return { preco: base, precoTotal: base * (diasEfetivos || 1), precoSemanal: 0, precoMensal: 0 };
         }
 
         const DIAS = { trimestral: 90, semestral: 180, anual: 365 };
@@ -136,7 +147,7 @@ const ReservaForm = ({ car }) => {
                       : categoria === 'anual'      ? base / 12 : 0;
 
         return { preco: base, precoTotal: base, precoSemanal: semanal, precoMensal: mensal };
-    }, [selectedPlano, categoria, duracaoDias]);
+    }, [selectedPlano, categoria, diasEfetivos]);
 
     // ---- Handlers ----
 
@@ -198,10 +209,12 @@ const ReservaForm = ({ car }) => {
             franquia_km: kmFranquia,
             dataRetirada,
             dataDevolucao,
+            horaRetirada,
+            horaDevolucao,
             valorTotal: precoTotal,
             valorDiario: preco,
             km_contratado: kmFranquia,
-            duracaoDias,
+            duracaoDias: diasEfetivos,
             dataInicio: dataRetirada,
             dataFim: dataDevolucao,
             carro: car,
@@ -323,6 +336,40 @@ const ReservaForm = ({ car }) => {
                                 days={duracaoDias}
                                 plan={categoria}
                             />
+                            <div className="grid grid-cols-2 gap-3 mt-3">
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Hora de retirada</label>
+                                    <input
+                                        type="time"
+                                        value={horaRetirada}
+                                        onChange={e => setHoraRetirada(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00D166]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Hora de devolução</label>
+                                    <input
+                                        type="time"
+                                        value={horaDevolucao}
+                                        onChange={e => setHoraDevolucao(e.target.value)}
+                                        className={cn(
+                                            'w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2',
+                                            extraDay
+                                                ? 'border-amber-400 focus:ring-amber-400 bg-amber-50'
+                                                : 'border-gray-200 focus:ring-[#00D166]'
+                                        )}
+                                    />
+                                </div>
+                            </div>
+                            {extraDay && (
+                                <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-amber-700 text-xs">
+                                    <Info size={14} className="shrink-0 mt-0.5" />
+                                    <span>
+                                        A devolução ({horaDevolucao}) é após a retirada ({horaRetirada}), então <strong>+1 dia é cobrado</strong>.
+                                        Total: <strong>{diasEfetivos} {diasEfetivos === 1 ? 'dia' : 'dias'}</strong>.
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -340,7 +387,7 @@ const ReservaForm = ({ car }) => {
                                 precoTotal={precoTotal}
                                 precoSemanal={precoSemanal}
                                 precoMensal={precoMensal}
-                                duracaoDias={duracaoDias}
+                                duracaoDias={diasEfetivos}
                                 onContinuar={handleContinuar}
                             />
                         </div>

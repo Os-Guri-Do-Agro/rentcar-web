@@ -62,9 +62,9 @@ class reservasService {
     )
   }
 
-  postConfirmReserva(id: string): Promise<any> {
+  postConfirmReserva(id: string, data: { hora_retirada?: string; hora_devolucao?: string } = {}): Promise<any> {
     return this.handleRequest(
-      api.post(`/reservas/${id}/confirm`, {}, { headers: this.authHeader() }),
+      api.post(`/reservas/${id}/confirm`, data, { headers: this.authHeader() }),
       'Erro ao confirmar reserva'
     )
   }
@@ -90,6 +90,13 @@ class reservasService {
     )
   }
 
+  postReservaGuest(data: any): Promise<any> {
+    return this.handleRequest(
+      api.post('/reservas/guest', data),
+      'Erro ao criar reserva como visitante'
+    )
+  }
+
   postReservaComArquivos(data: FormData): Promise<any> {
     return this.handleRequest(
       api.post('/reservas/com-arquivos', data, {
@@ -106,6 +113,32 @@ class reservasService {
     return this.handleRequest(
       api.get(`/reservas/${reservaId}/documents/${documentId}/download`, { headers: this.authHeader(), responseType: 'blob' }),
       'Erro ao fazer download do documento'
+    )
+  }
+
+  postReservaFotos(reservaId: string, tipo: string, files: any): Promise<any> {
+    return this.handleRequest(
+      api.post(`/reservas/${reservaId}/fotos?tipo=${tipo}`, files, {
+        headers: {
+          ...this.authHeader(),
+          'Content-Type': 'multipart/form-data',
+        },
+      }),
+      'Erro ao adicionar fotos'
+    )
+  }
+
+  postReservaEnviarEmail(reservaId: string): Promise<any> {
+    return this.handleRequest(
+      api.post(`/reservas/${reservaId}/confirmar-envio`, {}, { headers: this.authHeader() }),
+      'Erro ao enviar email'
+    )
+  }
+
+  getReservaFotos(reservaId: string): Promise<any> {
+    return this.handleRequest(
+      api.get(`/reservas/${reservaId}/fotos`, { headers: this.authHeader() }),
+      'Erro ao buscar fotos'
     )
   }
 

@@ -29,7 +29,7 @@ class documentosService {
 
   postDocumentsUpload(reservaId: string, data: any): Promise<any> {
     return this.handleRequest(
-      api.post(`/reservas/${reservaId}/documents/upload`, data, { headers: this.authHeader() }),
+      api.post(`/reservas/${reservaId}/documents/upload`, data, { headers: { ...this.authHeader(), 'Content-Type': 'multipart/form-data' } }),
       'Erro ao fazer upload dos documentos'
     )
   }
@@ -38,6 +38,13 @@ class documentosService {
     return this.handleRequest(
       api.post(`/reservas/${reservaId}/documents/save`, { headers: this.authHeader() }),
       'Erro ao salvar documentos'
+    )
+  }
+
+  getDocumentosDownload(reservaId: string, documentoId: string): Promise<any> {
+    return this.handleRequest(
+      api.get(`/reservas/${reservaId}/documents/${documentoId}/download`, { headers: this.authHeader(), responseType: 'blob' }),
+      'Erro ao fazer download do documento'
     )
   }
 

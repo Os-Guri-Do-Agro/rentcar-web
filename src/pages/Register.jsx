@@ -85,17 +85,18 @@ const Register = () => {
             senha: formData.password,
             nome: formData.nome,
             cpf: strip(formData.cpf),
-            telefone: strip(formData.phone),
+            telefone: '55' + strip(formData.phone),
             aceitouTermos: true
         }
       await authService.postRegister(data);
-      
+
       toast({
         title: "Conta criada com sucesso!",
-        description: "Redirecionando...",
-        className: "bg-green-600 text-white"
+        description: "Verifique seu e-mail para confirmar sua conta antes de fazer login.",
+        className: "bg-green-600 text-white",
+        duration: 6000,
       });
-      setTimeout(() => navigate('/login'), 2000);
+      setTimeout(() => navigate('/login'), 3000);
     } catch (error) {
       console.error(error);
       setErrorMsg(error.message);

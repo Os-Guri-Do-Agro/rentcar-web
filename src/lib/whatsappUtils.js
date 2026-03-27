@@ -67,7 +67,7 @@ export const generateWhatsAppMessage = (car, reservation, user, rentalType = "N�
  *Email:* ${user.email}
  *Telefone:* ${user.telefone || 'Não informado'}
 
-_Aguardo instruções para envio da documentação._
+_Aguardo a confirmação da documentação._
   `.trim();
 
   return message;

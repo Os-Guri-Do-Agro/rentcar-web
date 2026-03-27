@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Loader2, Mail, MessageSquare, CheckCircle, XCircle, RefreshCw, Search, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Loader2, Mail, MessageSquare, CheckCircle, XCircle, RefreshCw, Search, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownLeft, Settings2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
 import whatsappService from '@/services/whatsapp/whatsapp-service';
 
 const AdminLogs = () => {
@@ -14,6 +15,7 @@ const AdminLogs = () => {
   const [totalCount, setTotalCount] = useState(0);
   const PAGE_SIZE = 20;
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const fetchLogs = async (isRefresh = false) => {
     try {
@@ -72,6 +74,13 @@ const AdminLogs = () => {
             <p className="text-sm text-gray-500">Histórico de comunicações enviadas.</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
+            <button
+              onClick={() => navigate('/admin/emails')}
+              className="flex items-center gap-2 px-4 py-2 bg-[#0E3A2F] hover:bg-[#165945] text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              <Settings2 size={16} />
+              Gerenciar Templates
+            </button>
             <div className="relative flex-1 md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 

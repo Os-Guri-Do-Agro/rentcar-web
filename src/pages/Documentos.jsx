@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
-import { ArrowLeft, ShieldCheck, AlertTriangle, UploadCloud } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, ShieldCheck, UploadCloud, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useReserva } from '@/context/ReservaContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 // Services
 import reservasService from '@/services/reservas/reservas-services';
 import userService from '@/services/user/userService';
+import { validatePDFFile } from '@/lib/validationUtils';
 
 // Mapeia chave interna → tipo aceito pela API
 const DOC_TYPE_MAP = {
@@ -72,7 +73,6 @@ const Documentos = () => {
   );
 
   const [termosOpen, setTermosOpen] = useState(false);
-  const [globalError, setGlobalError] = useState(null);
 
   useEffect(() => {
     let dados = null;
@@ -88,7 +88,7 @@ const Documentos = () => {
     }
 
     if (!dados?.reserva?.valorTotal) {
-         toast({ title: "Erro de Dados", description: "Dados da reserva incompletos. Redirecionando...", variant: "destructive" });
+         toast({ title: "Erro de Dados", description: "Dados da reserva incompletos. Redirecionando...", variant: "destructive", className: "bg-white text-gray-900" });
          navigate('/frota');
          return;
     }
@@ -130,12 +130,16 @@ const Documentos = () => {
   // --- 2. Handlers ---
 
   const handleFileSelect = (file, type) => {
-    if (file) {
-        setFilesData(prev => ({
-            ...prev,
-            [type]: { file: file, status: 'idle', error: null }
-        }));
+    if (!file) return;
+    const validation = type === 'comprovante_trabalho' ? { valid: true } : validatePDFFile(file);
+    if (!validation.valid) {
+      toast({ title: 'Arquivo inválido', description: validation.error, variant: 'destructive', className: 'bg-white text-gray-900' });
+      return;
     }
+    setFilesData(prev => ({
+      ...prev,
+      [type]: { file, status: 'idle', error: null }
+    }));
   };
 
   const validateAllFields = () => {
@@ -164,7 +168,7 @@ const Documentos = () => {
       }
 
       if (!validateAllFields()) {
-          toast({ title: "Atenção", description: "Preencha todos os campos obrigatórios em vermelho.", variant: "destructive" });
+          toast({ title: "Atenção", description: "Preencha todos os campos obrigatórios em vermelho.", variant: "destructive", className: "bg-white text-gray-900" });
           window.scrollTo({ top: 0, behavior: 'smooth' });
           return;
       }
@@ -180,7 +184,8 @@ const Documentos = () => {
           toast({ 
               title: "Documentos Faltando", 
               description: `Por favor, anexe: ${missingFiles.join(', ')}.`, 
-              variant: "destructive" 
+              variant: "destructive",
+              className: "bg-white text-gray-900"
           });
           return;
       }
@@ -191,8 +196,6 @@ const Documentos = () => {
   const handleFinalSubmit = async () => {
     setTermosOpen(false);
     setIsSubmitting(true);
-    setGlobalError(null);
-
     try {
         const reserva = contextData.reserva;
 
@@ -203,6 +206,9 @@ const Documentos = () => {
         payload.append('carro_id',          contextData.carro?.id ?? '');
         payload.append('data_retirada',     reserva.dataRetirada || reserva.dataInicio || '');
         payload.append('data_devolucao',    reserva.dataDevolucao || reserva.dataFim || '');
+        payload.append('hora_retirada',            reserva.horaRetirada || '09:00');
+        payload.append('hora_retirada_solicitada', reserva.horaRetirada || '09:00');
+        payload.append('hora_devolucao',           reserva.horaDevolucao || '09:00');
         payload.append('valor_total',       String(reserva.valorTotal ?? 0));
         payload.append('tipo_reserva',      contextData.tipoReserva || reserva.tipo_locacao || '');
         payload.append('plano',             reserva.plano ?? '');
@@ -219,7 +225,7 @@ const Documentos = () => {
         const usuarioPayload = {
             nome:                 formData.nome,
             email:                formData.email,
-            telefone:             strip(formData.telefone),
+            telefone:             '55' + strip(formData.telefone),
             data_nascimento:      formData.data_nascimento,
             cpf:                  strip(formData.cpf),
             cnpj:                 strip(formData.cnpj),
@@ -251,8 +257,7 @@ const Documentos = () => {
 
     } catch (error) {
         console.error('[Documentos] ERRO FATAL:', error);
-        setGlobalError(error.message || "Ocorreu um erro no processo.");
-        toast({ title: "Atenção", description: error.message, variant: "destructive" });
+        toast({ title: "Atenção", description: error.message || "Ocorreu um erro no processo.", variant: "destructive", className: "bg-white text-gray-900" });
     } finally {
         setIsSubmitting(false);
     }
@@ -272,6 +277,57 @@ const Documentos = () => {
   return (
     <>
       <Helmet><title>Finalizar Reserva | JL Rent a Car</title></Helmet>
+
+      {/* Modal de login obrigatório */}
+      <AnimatePresence>
+        {!isAuthenticated && (
+          <motion.div
+            key="auth-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center"
+            >
+              <div className="w-14 h-14 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-4">
+                <LogIn size={26} className="text-[#0066FF]" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Acesso necessário</h2>
+              <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                Para finalizar sua reserva você precisa estar logado na sua conta.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate('/login', { state: { from: location } })}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-[#0066FF] hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
+                >
+                  <LogIn size={18} />
+                  Fazer Login
+                </button>
+                <button
+                  onClick={() => navigate('/register', { state: { from: location } })}
+                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-bold rounded-xl transition-colors"
+                >
+                  <UserPlus size={18} />
+                  Criar Conta
+                </button>
+                <button
+                  onClick={() => navigate(-1)}
+                  className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Voltar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <div className="min-h-screen bg-[#F9FAFB] font-sans pb-32 lg:pb-12">
         <ProgressBar currentStep={2} />
@@ -305,17 +361,6 @@ const Documentos = () => {
                                 <p className="text-sm text-gray-500">Envie os arquivos em formato PDF (Max 10MB cada).</p>
                             </div>
                         </div>
-
-                        {globalError && (
-                            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200 flex items-start gap-3 animate-in slide-in-from-top-2">
-                                <AlertTriangle className="shrink-0 mt-0.5" size={20} />
-                                <div className="text-sm">
-                                    <p className="font-bold mb-1">Houve um problema no envio:</p>
-                                    <p>{globalError}</p>
-                                    <p className="mt-2 text-xs font-semibold">Tente enviar novamente clicando no botão abaixo.</p>
-                                </div>
-                            </div>
-                        )}
 
                         {(() => {
                             const docs = DOCS_CONFIG[contextData.tipoReserva] ?? DOCS_CONFIG.particular;
@@ -351,7 +396,7 @@ const Documentos = () => {
                             reserva={contextData.reserva} 
                             loading={isSubmitting} 
                             onFinalizar={handlePreSubmit}
-                            buttonLabel={globalError ? "Tentar Novamente" : "Finalizar Reserva"}
+                            buttonLabel="Finalizar Reserva"
                         />
                     </div>
                 </motion.div>
@@ -363,7 +408,7 @@ const Documentos = () => {
                 reserva={contextData.reserva} 
                 loading={isSubmitting} 
                 onFinalizar={handlePreSubmit}
-                buttonLabel={globalError ? "Tentar Novamente" : "Finalizar Reserva"}
+                buttonLabel="Finalizar Reserva"
             />
         </div>
 
