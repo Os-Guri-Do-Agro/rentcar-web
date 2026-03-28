@@ -11,7 +11,8 @@ export const validateEmail = (email) => {
 };
 
 export const validatePhone = (phone) => {
-  const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+  let cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+  if (cleanPhone.length === 13 && cleanPhone.startsWith('55')) cleanPhone = cleanPhone.slice(2);
   if (!cleanPhone) return { valid: false, error: 'Telefone é obrigatório.' };
   if (cleanPhone.length < 10 || cleanPhone.length > 11) return { valid: false, error: 'Telefone deve ter 10 ou 11 dígitos.' };
   return { valid: true };

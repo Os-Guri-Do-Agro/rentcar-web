@@ -5,7 +5,8 @@
       "Bash(grep -r \"telefone\\\\|cpf\\\\|cnpj\\\\|cnh\\\\|cep\" c:/Users/darkb/Documents/projetos/rentcar-web/src --include=*.jsx --include=*.js --include=*.tsx --include=*.ts)",
       "Bash(grep -r \"cpf\\\\|telefone\\\\|cnh\\\\|cep\" c:/Users/darkb/Documents/projetos/rentcar-web/src --include=*.jsx --include=*.js --include=*.tsx --include=*.ts -l)",
       "Bash(grep -r \"VITE_BASE_URL\\\\|VITE_API\" c:/Users/darkb/Documents/projetos/rentcar-web/.env*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

@@ -103,7 +103,7 @@ const Documentos = () => {
                 ...prev,
                 nome: data.nome || '',
                 email: data.email || '',
-                telefone: data.telefone || '',
+                telefone: (() => { const c = (data.telefone || '').replace(/\D/g, ''); return c.length === 13 && c.startsWith('55') ? c.slice(2) : c; })(),
                 cpf: data.cpf || '',
                 cnh: data.cnh || '',
                 data_nascimento: data.data_nascimento?.split('T')[0] || '',

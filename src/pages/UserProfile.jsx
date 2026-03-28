@@ -83,7 +83,7 @@ const UserProfile = () => {
       setFormData({
         nome: data.nome || '',
         email: data.email || '',
-        telefone: data.telefone || '',
+        telefone: (() => { const c = (data.telefone || '').replace(/\D/g, ''); return c.length === 13 && c.startsWith('55') ? c.slice(2) : c; })(),
         cpf: data.cpf || '',
         data_nascimento: data.data_nascimento?.split('T')[0] || '',
         endereco_rua: data.endereco_rua || '',
@@ -249,7 +249,7 @@ const UserProfile = () => {
             onEdit={() => setContactEditing(true)}
             onCancel={() => {
               setContactEditing(false);
-              setFormData(prev => ({ ...prev, telefone: userInfo.telefone }));
+              const c = (userInfo.telefone || '').replace(/\D/g, ''); setFormData(prev => ({ ...prev, telefone: c.length === 13 && c.startsWith('55') ? c.slice(2) : c }));
             }}
             onSave={() => handleUpdate('contact', { telefone: '55' + formData.telefone.replace(/\D/g, '') })}
             loading={loading}
