@@ -167,6 +167,7 @@ const Login = () => {
           description: msg || 'Verifique suas credenciais e tente novamente',
           variant: 'destructive',
           duration: 3000,
+          className: 'bg-red-600 text-white',
         });
       }
     } finally {

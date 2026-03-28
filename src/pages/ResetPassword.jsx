@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Loader2, CheckCircle2, AlertTriangle, XCircle, Check } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import authService from '@/services/auth/auth-service';
@@ -22,17 +22,24 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  // Guard: requer código verificado via ForgotPassword
+  useEffect(() => {
+    if (!sessionStorage.getItem('reset_email')) {
+      navigate('/login');
+    }
+  }, [navigate]);
+
   // Form State
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  
+
   // Logic State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
-  const [validSession, setValidSession] = useState(true); // Assume true initially if reached via link
+  const [validSession, setValidSession] = useState(true);
   
   // Validation State
   const [strength, setStrength] = useState({ score: 'weak', requirements: [] });
@@ -74,13 +81,17 @@ const ResetPassword = () => {
     // Usually token is in the hash and handled by Supabase Session
     let result;
     try {
-        await authService.postRedefinirSenha({ password });
+        await authService.postRedefinirSenha({
+            email: sessionStorage.getItem('reset_email'),
+            novaSenha: password,
+        });
         result = { success: true };
     } catch (err) {
         result = { success: false, error: err?.message || 'Erro ao redefinir senha.' };
     }
 
     if (result.success) {
+        sessionStorage.removeItem('reset_email');
         setIsSuccess(true);
         toast({
             title: "Senha Atualizada!",
@@ -99,6 +110,7 @@ const ResetPassword = () => {
             title: "Erro",
             description: "Falha ao atualizar senha.",
             variant: "destructive",
+            className: "bg-red-600 text-white",
         });
     }
     setIsSubmitting(false);
