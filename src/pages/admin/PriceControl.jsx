@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { updateCarPrice, fetchPriceHistory } from '@/services/priceHistoryService';
 import carService from '@/services/cars/carService';
 import { Loader2, Save, TrendingDown, TrendingUp, History } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -17,15 +16,9 @@ const PriceControl = () => {
 
   const loadData = async () => {
     try {
-      const [carsRes, historyData] = await Promise.all([
-        carService.getCars('false', ''),
-        fetchPriceHistory()
-      ]);
+      const carsRes = await carService.getCars('false', '');
       const carsData = carsRes?.data ?? carsRes ?? [];
       setCars(carsData);
-      setPriceHistory(historyData);
-      
-      // Initialize price inputs
       const initialPrices = {};
       carsData.forEach(c => initialPrices[c.id] = c.preco_diaria);
       setPrices(initialPrices);
@@ -43,11 +36,10 @@ const PriceControl = () => {
   const savePrice = async (car) => {
     const newPrice = prices[car.id];
     if (newPrice == car.preco_diaria) return;
-
     try {
-      await updateCarPrice(car.id, newPrice, car.preco_diaria);
+      await carService.patchCarById(car.id, { preco_diaria: newPrice });
       toast({ title: "Preço atualizado com sucesso", className: "bg-green-600 text-white border-none" });
-      loadData(); // Reload to refresh history and base state
+      loadData();
     } catch (error) {
       toast({ title: "Erro ao atualizar preço", variant: "destructive" });
     }

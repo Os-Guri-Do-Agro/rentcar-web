@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { ArrowLeft, Save, Loader2, DollarSign } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/supabaseClient';
-import { getPrecosCarro, updatePrecoCarro, updateKmAdicionalValor } from '@/services/precosCarroService';
+import carService from '@/services/cars/carService';
 
 const PLANS = [
     {
@@ -51,18 +50,9 @@ const AdminEditarPrecosCarro = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const { data: carData } = await supabase.from('cars').select('id, nome, placa').eq('id', carroId).single();
-            setCar(carData);
-
-            const pricesData = await getPrecosCarro(carroId);
-            setPrices(pricesData || []);
-            
-            if (pricesData && pricesData.length > 0) {
-                const firstWithKm = pricesData.find(p => p.km_adicional_valor !== null);
-                if (firstWithKm) setKmAdicional(firstWithKm.km_adicional_valor);
-            }
+            const res = await carService.getCarById(carroId);
+            setCar(res?.data ?? res);
         } catch (error) {
-            console.error(error);
             toast({ title: "Erro ao carregar", variant: "destructive" });
         } finally {
             setLoading(false);
@@ -92,21 +82,7 @@ const AdminEditarPrecosCarro = () => {
     };
 
     const handleSave = async () => {
-        setSaving(true);
-        try {
-            for (const p of prices) {
-                if (p.valor !== '' && p.valor !== null && p.valor !== undefined) {
-                    await updatePrecoCarro(carroId, p.tipo_plano, p.tipo_franquia, p.valor);
-                }
-            }
-            await updateKmAdicionalValor(carroId, kmAdicional);
-            toast({ title: "Preços atualizados com sucesso!", className: "bg-green-600 text-white" });
-        } catch (error) {
-            console.error(error);
-            toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-        } finally {
-            setSaving(false);
-        }
+        toast({ title: "Não disponível", description: "Salvar preços requer endpoint de API.", variant: "destructive" });
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#00D166]" size={40}/></div>;

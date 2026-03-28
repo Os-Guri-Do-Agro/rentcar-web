@@ -3,10 +3,9 @@ import { useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { CheckCircle, Send, FileText, Loader2 } from 'lucide-react';
-import { getAdminConfigs } from '@/services/adminService';
+import { getAdminConfigs } from '@/services/admin/configService';
 import { generateWhatsAppMessage, generateWhatsAppURL } from '@/lib/whatsappUtils';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabaseClient';
 import DocumentosDisplay from '@/components/DocumentosDisplay';
 import reservasServices from '@/services/reservas/reservas-services';
 

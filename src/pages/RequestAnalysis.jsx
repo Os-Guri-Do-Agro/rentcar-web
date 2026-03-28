@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
+import carService from '@/services/cars/carService';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Upload, FileText, CheckCircle, Car as CarIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -31,12 +31,10 @@ const RequestAnalysis = () => {
       navigate('/login');
       return;
     }
-    const fetchCar = async () => {
-      const { data } = await supabase.from('cars').select('*').eq('id', carId).single();
-      setCar(data);
-      setFetchingCar(false);
-    };
-    fetchCar();
+    carService.getCarById(carId)
+      .then(res => setCar(res?.data ?? res))
+      .catch(() => {})
+      .finally(() => setFetchingCar(false));
   }, [carId, isAuthenticated, navigate, toast]);
 
   const handleFileChange = (e, type) => {
@@ -50,21 +48,6 @@ const RequestAnalysis = () => {
     }
   };
 
-  const uploadFile = async (file, path) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${path}/${fileName}`;
-    
-    const { error } = await supabase.storage
-      .from('solicitacoes-documentos')
-      .upload(filePath, file);
-      
-    if (error) throw error;
-    
-    // Get public URL
-    const { data } = supabase.storage.from('solicitacoes-documentos').getPublicUrl(filePath);
-    return data.publicUrl;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,47 +60,8 @@ const RequestAnalysis = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      const protocol = `JL-${Date.now().toString().slice(-6)}`;
-      const uploadedDocs = {};
-
-      console.log("[PAGE] Using usuario.id:", usuario.id);
-
-      // Upload files sequentially
-      // [REPLACE] usuario.id
-      uploadedDocs.cnh = await uploadFile(documents.cnh, `solicitacoes/${usuario.id}/cnh`);
-      uploadedDocs.residencia = await uploadFile(documents.residencia, `solicitacoes/${usuario.id}/residencia`);
-      uploadedDocs.antecedentes = await uploadFile(documents.antecedentes, `solicitacoes/${usuario.id}/antecedentes`);
-      
-      if (tipoLocacao === 'aplicativo' && documents.app_cadastro) {
-        uploadedDocs.app_cadastro = await uploadFile(documents.app_cadastro, `solicitacoes/${usuario.id}/app`);
-      }
-
-      // Insert record
-      const { data, error } = await supabase.from('solicitacoes_analise').insert([{
-        usuario_id: usuario.id, // Keeping user_id for this table as schema was not explicitly migrated to usuario_id for solicitacoes_analise
-        car_id: carId,
-        tipo_locacao: tipoLocacao,
-        status: 'Pendente',
-        numero_protocolo: protocol,
-        documentos_enviados: uploadedDocs
-      }]).select().single();
-
-      if (error) throw error;
-
-      // TODO: Call Edge Function for email (simulated here)
-      // await supabase.functions.invoke('send-analysis-request-email', { body: { ... } })
-
-      toast({ title: "Solicitação Enviada!", description: `Protocolo: ${protocol}` });
-      navigate(`/minha-solicitacao/${data.id}`);
-
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Erro ao enviar", description: "Tente novamente mais tarde.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    toast({ title: "Não disponível", description: "Envio de solicitação requer endpoint de API.", variant: "destructive" });
+    setLoading(false);
   };
 
   if (fetchingCar) return <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>;

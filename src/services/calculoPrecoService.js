@@ -1,6 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
 import { calcularDuracao } from '@/lib/dateUtils';
-import { getColumnName } from './carPricingService';
 
 export const calculateWeeklyPrice = (total, plan) => {
     if (!total || total <= 0) return 0;
@@ -20,80 +18,63 @@ export const calculateMonthlyPrice = (total, plan) => {
     return 0;
 };
 
-export const calcularPrecoReserva = async (carroId, tipoLocacao, tipoPlano, usoKm, dataInicio, dataFim) => {
-    if (!dataInicio || !dataFim) return { total: 0, dias: 0, diario: 0, semanal: 0, mensal: 0 };
-
-    const dias = calcularDuracao(dataInicio, dataFim, tipoPlano);
-    
-    try {
-        const { data: car, error } = await supabase
-            .from('cars')
-            .select('*')
-            .eq('id', carroId)
-            .single();
-
-        if (error || !car) return { total: 0, dias, erro: 'Erro ao consultar veículo.' };
-
-        let total = 0;
-        let diario = 0;
-        let semanal = 0;
-        let mensal = 0;
-        let columnName = '';
-
-        const normalizedType = tipoLocacao || 'particular';
-        
-        // Use the centralized getColumnName from carPricingService to ensure consistency
-        columnName = getColumnName(normalizedType, tipoPlano, usoKm);
-
-        if (columnName && car[columnName]) {
-            const priceVal = parseFloat(car[columnName]);
-            
-            if (tipoPlano === 'diario') {
-                diario = priceVal;
-                total = diario * dias;
-            } else {
-                // Fixed Plans (Semanal, Trimestral, Semestral, Anual, Franquia)
-                total = priceVal;
-                
-                // Calculate display values
-                if (tipoPlano === 'semanal') {
-                    semanal = total;
-                    diario = total / 7;
-                } else if (tipoPlano === 'trimestral') {
-                    semanal = calculateWeeklyPrice(total, 'trimestral');
-                    mensal = calculateMonthlyPrice(total, 'trimestral');
-                    diario = total / 90;
-                } else if (tipoPlano === 'semestral') {
-                    semanal = calculateWeeklyPrice(total, 'semestral');
-                    mensal = calculateMonthlyPrice(total, 'semestral');
-                    diario = total / 180;
-                } else if (tipoPlano === 'anual') {
-                    semanal = calculateWeeklyPrice(total, 'anual');
-                    mensal = calculateMonthlyPrice(total, 'anual');
-                    diario = total / 365;
-                } else if (tipoPlano === 'franquia') {
-                    mensal = total;
-                    semanal = total / 4; // Approx
-                    diario = total / 30; // Approx
-                }
-            }
-        } else {
-             return { total: 0, dias, erro: `Plano ${tipoPlano} (${usoKm}km) indisponível ou não configurado.` };
-        }
-
-        if (total <= 0) return { total: 0, dias, erro: 'Preço não configurado (R$ 0,00).' };
-
-        return { 
-            total, 
-            dias, 
-            diario, 
-            semanal, 
-            mensal,
-            valorBase: diario 
-        };
-
-    } catch (err) {
-        console.error(err);
-        return { total: 0, dias, erro: 'Erro interno de cálculo.' };
+const getColumnName = (tipo_locacao, tipo_plano, km) => {
+    const type = tipo_locacao?.toLowerCase() || 'particular';
+    const plan = tipo_plano?.toLowerCase() || 'diario';
+    if (type === 'particular') {
+        if (plan === 'diario' && km) return `${type}_diario_${km}km`;
+        if (plan === 'semanal' && km) return `${type}_semanal_${km}`;
+        if (plan === 'franquia' && km) return `${type}_franquia_${km}km`;
+        if (plan === 'trimestral') return `${type}_trimestral`;
+        if (plan === 'semestral') return `${type}_semestral`;
+    } else if (type === 'motorista') {
+        if (plan === 'semanal' && km) return `${type}_semanal_${km}km`;
+        if (plan === 'trimestral' && km) return `${type}_trimestral_${km}`;
+        if (plan === 'semestral' && km) return `${type}_semestral_${km}`;
+        if (plan === 'anual' && km) return `${type}_anual_${km}`;
+        if (plan === 'franquia' && km) return `${type}_franquia_${km}km`;
+    } else {
+        if (plan === 'diario' && km) return `${type}_diario_${km}km`;
+        if (plan === 'franquia' && km) return `${type}_franquia_${km}km`;
     }
+    return null;
+};
+
+export const calcularPrecoReserva = (carro, tipoLocacao, tipoPlano, usoKm, dataInicio, dataFim) => {
+    if (!dataInicio || !dataFim || !carro) return { total: 0, dias: 0, diario: 0, semanal: 0, mensal: 0 };
+    const dias = calcularDuracao(dataInicio, dataFim, tipoPlano);
+    const columnName = getColumnName(tipoLocacao, tipoPlano, usoKm);
+    if (!columnName || !carro[columnName]) {
+        return { total: 0, dias, erro: `Plano ${tipoPlano} (${usoKm}km) indisponível ou não configurado.` };
+    }
+    const priceVal = parseFloat(carro[columnName]);
+    let total = 0, diario = 0, semanal = 0, mensal = 0;
+    if (tipoPlano === 'diario') {
+        diario = priceVal;
+        total = diario * dias;
+    } else {
+        total = priceVal;
+        if (tipoPlano === 'semanal') {
+            semanal = total;
+            diario = total / 7;
+        } else if (tipoPlano === 'trimestral') {
+            semanal = calculateWeeklyPrice(total, 'trimestral');
+            mensal = calculateMonthlyPrice(total, 'trimestral');
+            diario = total / 90;
+        } else if (tipoPlano === 'semestral') {
+            semanal = calculateWeeklyPrice(total, 'semestral');
+            mensal = calculateMonthlyPrice(total, 'semestral');
+            diario = total / 180;
+        } else if (tipoPlano === 'anual') {
+            semanal = calculateWeeklyPrice(total, 'anual');
+            mensal = calculateMonthlyPrice(total, 'anual');
+            diario = total / 365;
+        } else if (tipoPlano === 'franquia') {
+            mensal = total;
+            semanal = total / 4;
+            diario = total / 30;
+        }
+    }
+    if (total <= 0) return { total: 0, dias, erro: 'Preço não configurado (R$ 0,00).' };
+    return { total, dias, diario, semanal, mensal, valorBase: diario };
 };

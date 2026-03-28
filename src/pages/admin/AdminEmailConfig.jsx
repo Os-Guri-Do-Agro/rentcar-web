@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Save, Loader2, Mail, Building, MapPin, Phone, Send } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/supabaseClient';
-import { testEmail } from '@/services/emailService';
+import { getAdminConfigs, putAdminConfig } from '@/services/admin/configService';
 
 const AdminEmailConfig = () => {
   const [loading, setLoading] = useState(false);
@@ -21,98 +20,35 @@ const AdminEmailConfig = () => {
   }, []);
 
   const loadConfig = async () => {
-    console.log("Carregando configurações de email...");
     try {
       setInitialLoading(true);
-      const { data, error } = await supabase
-        .from('admin_configs')
-        .select('*')
-        .in('chave', ['company_name', 'company_email', 'company_phone', 'company_address']);
-
-      if (error) throw error;
-
-      console.log("Configurações carregadas:", data);
-      
-      const configMap = {};
-      data.forEach(item => {
-        configMap[item.chave] = item.valor;
-      });
-
+      const configMap = await getAdminConfigs();
       setValue('company_name', configMap.company_name || 'JL Rent a Car');
       setValue('company_email', configMap.company_email || '');
       setValue('company_phone', configMap.company_phone || '');
       setValue('company_address', configMap.company_address || '');
-      
-      if (configMap.company_email) {
-          setTestEmailValue(configMap.company_email);
-      }
-
+      if (configMap.company_email) setTestEmailValue(configMap.company_email);
     } catch (error) {
-      console.error("Erro ao carregar configurações:", error);
-      toast({
-        title: 'Erro ao carregar',
-        description: 'Não foi possível carregar as configurações.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao carregar', description: 'Não foi possível carregar as configurações.', variant: 'destructive' });
     } finally {
       setInitialLoading(false);
     }
   };
 
   const onSubmit = async (data) => {
-    console.log("Salvando configurações...", data);
     setLoading(true);
     try {
-      const updates = Object.entries(data).map(([key, value]) => {
-        return supabase
-          .from('admin_configs')
-          .upsert({ chave: key, valor: value, updated_at: new Date() }, { onConflict: 'chave' });
-      });
-
-      await Promise.all(updates);
-      console.log("Configurações salvas com sucesso");
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Configurações de email e contato atualizadas!',
-        className: 'bg-green-600 text-white border-none',
-      });
+      await Promise.all(Object.entries(data).map(([key, value]) => putAdminConfig(key, value)));
+      toast({ title: 'Sucesso', description: 'Configurações de email e contato atualizadas!', className: 'bg-green-600 text-white border-none' });
     } catch (error) {
-      console.error(`Erro ao salvar configurações: ${error.message}`);
-      toast({
-        title: 'Erro ao salvar',
-        description: 'Falha ao salvar as alterações.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao salvar', description: 'Falha ao salvar as alterações.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
   
-  const handleTestEmail = async () => {
-    const targetEmail = testEmailValue || companyEmail;
-    
-    if (!targetEmail) {
-        toast({ title: "Email necessário", description: "Configure ou digite um email para testar.", variant: "destructive" });
-        return;
-    }
-
-    console.log("Testando email...");
-    setTestingEmail(true);
-    try {
-        const result = await testEmail(targetEmail);
-        if (result.success) {
-            console.log("Email de teste enviado com sucesso");
-            toast({ title: "Sucesso!", description: `Email de teste enviado para ${targetEmail}`, className: "bg-green-600 text-white" });
-        } else {
-            throw new Error(result.error);
-        }
-    } catch (error) {
-        console.error(`Erro ao enviar email de teste: ${error.message}`);
-        toast({ title: "Erro no envio", description: error.message, variant: "destructive" });
-    } finally {
-        setTestingEmail(false);
-    }
+  const handleTestEmail = () => {
+    toast({ title: "Não disponível", description: "Envio de email de teste requer endpoint de API.", variant: "destructive" });
   };
 
   if (initialLoading) {

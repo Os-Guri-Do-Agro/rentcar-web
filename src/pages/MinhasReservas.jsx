@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, ChevronRight, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 import reservasServices from '@/services/reservas/reservas-services';
 
@@ -13,15 +12,7 @@ const MinhasReservas = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (usuario) {
-      fetchReservas();
-      const sub = supabase.channel(`my_reservas_${usuario.id}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas', filter: `usuario_id=eq.${usuario.id}` }, () => {
-            fetchReservas();
-        })
-        .subscribe();
-      return () => sub.unsubscribe();
-    }
+    if (usuario) fetchReservas();
   }, [usuario]);
 
   const fetchReservas = async () => {

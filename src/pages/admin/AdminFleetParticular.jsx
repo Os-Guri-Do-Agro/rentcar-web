@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabaseClient';
 import { Loader2, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import carService from '@/services/cars/carService';
@@ -14,13 +13,8 @@ const AdminFleetParticular = () => {
 
   const fetchCars = async () => {
     try {
-      const { data, error } = await supabase
-        .from('cars')
-        .select('*')
-        .eq('tipo_frota', 'particular')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
+      const res = await carService.getCars('false', '*');
+      const data = (res?.data ?? res ?? []).filter(c => c.tipo_frota === 'particular');
       setCars(data);
     } catch (error) {
       toast({ title: "Erro", description: "Falha ao buscar frota particular.", variant: "destructive" });
@@ -31,14 +25,6 @@ const AdminFleetParticular = () => {
 
   useEffect(() => {
     fetchCars();
-    const channel = supabase
-      .channel('admin-cars-particular')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cars', filter: "tipo_frota=eq.particular" }, () => {
-        fetchCars();
-        toast({ title: "Atualizado", description: "Lista atualizada em tempo real.", className: "bg-blue-600 text-white border-none" });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const handleDelete = (id) => {

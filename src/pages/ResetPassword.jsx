@@ -4,8 +4,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Loader2, CheckCircle2, AlertTriangle, XCircle, Check } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { resetPassword, validatePasswordStrength } from '@/services/authService';
-import { supabase } from '@/lib/supabaseClient';
+import authService from '@/services/auth/auth-service';
+
+const validatePasswordStrength = (password) => {
+    const requirements = [
+        { id: 'length',    label: 'Mínimo 8 caracteres', met: password.length >= 8 },
+        { id: 'upper',     label: 'Letra maiúscula',      met: /[A-Z]/.test(password) },
+        { id: 'number',    label: 'Número',               met: /[0-9]/.test(password) },
+        { id: 'special',   label: 'Caractere especial',   met: /[^A-Za-z0-9]/.test(password) },
+    ];
+    const met = requirements.filter(r => r.met).length;
+    const score = met <= 1 ? 'weak' : met <= 3 ? 'medium' : 'strong';
+    return { score, requirements };
+};
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -27,33 +38,6 @@ const ResetPassword = () => {
   const [strength, setStrength] = useState({ score: 'weak', requirements: [] });
   const [passwordsMatch, setPasswordsMatch] = useState(true);
 
-  // Check for session/fragment on mount
-  useEffect(() => {
-    const checkSession = async () => {
-       const { data: { session } } = await supabase.auth.getSession();
-       if (!session) {
-         // Standard Supabase flow: URL contains hash with access_token. 
-         // The Supabase client usually handles this automatically on load.
-         // If still no session, the link might be expired or invalid.
-         console.warn("No active session found on Reset Password page.");
-         // We don't block immediately because sometimes the session handshake takes a moment,
-         // but ideally the auth state listener would handle this.
-         // For now, we allow the user to see the form but submission will fail if no session.
-       }
-    };
-    
-    // Listen for auth state changes to detect the recovery login
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth Event on Reset Page:", event);
-      if (event === 'PASSWORD_RECOVERY') {
-         setValidSession(true);
-      }
-    });
-
-    checkSession();
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   // Update validation on type
   useEffect(() => {
@@ -88,7 +72,13 @@ const ResetPassword = () => {
     setIsSubmitting(true);
 
     // Usually token is in the hash and handled by Supabase Session
-    const result = await resetPassword(password);
+    let result;
+    try {
+        await authService.postRedefinirSenha({ password });
+        result = { success: true };
+    } catch (err) {
+        result = { success: false, error: err?.message || 'Erro ao redefinir senha.' };
+    }
 
     if (result.success) {
         setIsSuccess(true);

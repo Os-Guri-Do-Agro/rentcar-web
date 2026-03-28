@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import authService from '@/services/auth/auth-service';
 import { Helmet } from 'react-helmet';
 import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -15,16 +15,13 @@ const RecuperarSenha = () => {
         setLoading(true);
         console.log("Enviando link de recuperação...");
         
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/redefinir-senha`,
-        });
- 
-        setLoading(false);
-        if (error) {
-            console.error(error);
-            toast({ title: "Erro", description: error.message, variant: "destructive" });
-        } else {
+        try {
+            await authService.postEsqueceuSenha({ email });
             toast({ title: "E-mail enviado!", description: "Verifique sua caixa de entrada.", className: "bg-green-600 text-white" });
+        } catch (error) {
+            toast({ title: "Erro", description: error?.message || 'Falha ao enviar e-mail.', variant: "destructive" });
+        } finally {
+            setLoading(false);
         }
     };
 

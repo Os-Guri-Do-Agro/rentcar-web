@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import carService from '@/services/cars/carService';
 import { Loader2, AlertCircle, Car } from 'lucide-react';
 import { useReserva } from '@/context/ReservaContext';
 import { calcularDataDevolucao } from '@/lib/dateUtils';
@@ -36,12 +36,10 @@ const SimularFrota = ({ car, carId }) => {
     useEffect(() => {
         if (!car && carId) {
             setLoadingCar(true);
-            const fetchCar = async () => {
-                const { data } = await supabase.from('cars').select('*').eq('id', carId).single();
-                if (data) setActiveCar(data);
-                setLoadingCar(false);
-            };
-            fetchCar();
+            carService.getCarById(carId)
+                .then(res => { if (res?.data ?? res) setActiveCar(res?.data ?? res); })
+                .catch(() => {})
+                .finally(() => setLoadingCar(false));
         } else if (car) {
             setActiveCar(car);
         }
@@ -112,12 +110,12 @@ const SimularFrota = ({ car, carId }) => {
             setCalculating(true);
             setErrorMsg('');
 
-            const res = await calcularPrecoReserva(
-                activeCar.id, 
-                tipoLocacao, 
-                tipoPlano, 
-                usoKm, 
-                dataRetirada, 
+            const res = calcularPrecoReserva(
+                activeCar,
+                tipoLocacao,
+                tipoPlano,
+                usoKm,
+                dataRetirada,
                 dataDevolucao
             );
 

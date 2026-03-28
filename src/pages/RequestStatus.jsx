@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { supabase } from '@/lib/supabaseClient';
 import { Loader2, CheckCircle, Clock, XCircle, FileText, ArrowLeft } from 'lucide-react';
 
 const RequestStatus = () => {
@@ -10,16 +9,7 @@ const RequestStatus = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchReq = async () => {
-      const { data, error } = await supabase
-        .from('solicitacoes_analise')
-        .select('*, cars(nome, imagem_url)')
-        .eq('id', id)
-        .single();
-      if (!error) setRequest(data);
-      setLoading(false);
-    };
-    fetchReq();
+    setLoading(false);
   }, [id]);
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin" /></div>;

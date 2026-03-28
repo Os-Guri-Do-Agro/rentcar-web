@@ -51,7 +51,7 @@ const CarCard = ({ car }) => {
         
         <div className="flex items-end gap-1 mb-6">
             <span className="text-sm text-gray-500 mb-1">A partir de</span>
-            <span className="text-2xl font-bold text-[#0E3A2F]">R$ {car.preco_diaria_particular || car.preco_diaria || 99}</span>
+            <span className="text-2xl font-bold text-[#0E3A2F]">R$ {car.planos_disponiveis[0]?.preco}</span>
             <span className="text-sm text-gray-500 mb-1">/dia</span>
         </div>
 

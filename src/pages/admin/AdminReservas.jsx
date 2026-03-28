@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, Search, Eye, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -18,14 +17,7 @@ const AdminReservas = () => {
     
     useEffect(() => {
         fetchReservas();
-        const sub = supabase.channel('admin_reservas_list')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, () => {
-                logAdminDebug("Realtime change detected, refreshing...");
-                fetchReservas();
-            })
-            .subscribe();
-        return () => { sub.unsubscribe(); };
-    }, []); 
+    }, []);
 
     const fetchReservas = async () => {
         if (isFetching) return;

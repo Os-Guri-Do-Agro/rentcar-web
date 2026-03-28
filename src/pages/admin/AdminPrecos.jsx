@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Loader2, DollarSign, Save, Search } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/supabaseClient';
-import { getPrecosAllCars, updatePreco } from '@/services/precosService';
+import carService from '@/services/cars/carService';
 
 const AdminPrecos = () => {
     const [cars, setCars] = useState([]);
@@ -29,13 +28,14 @@ const AdminPrecos = () => {
 
     const fetchData = async () => {
         setLoading(true);
-        console.log("Carregando tabela de preços...");
-        const { data: carsData } = await supabase.from('cars').select('id, nome, placa, imagem_url').order('nome');
-        const pricesData = await getPrecosAllCars();
-        
-        setCars(carsData || []);
-        setPrices(pricesData || []);
-        setLoading(false);
+        try {
+            const res = await carService.getCars('false', 'id,nome,placa,imagem_url');
+            setCars(res?.data ?? res ?? []);
+        } catch {
+            setCars([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const getPriceValue = (carId, planId, franchise) => {
@@ -56,26 +56,7 @@ const AdminPrecos = () => {
     };
 
     const saveChanges = async () => {
-        setSaving(true);
-        console.log("Salvando todas as alterações de preços...");
-        try {
-            // In a real app, track dirty state. Here, simplistic approach: save all visible (or loop all)
-            // To avoid spamming, let's just save what we have in 'prices' state
-            // Better yet, just specific ones. For now, prompt user logic:
-            // Let's iterate only current filtered view to save, or all.
-            // Simplified: Save ALL distinct entries in 'prices' state array
-            
-            for (const p of prices) {
-                if (p.valor !== '' && p.valor !== null) {
-                    await updatePreco(p.carro_id, p.plano, p.franquia_km, p.valor);
-                }
-            }
-            toast({ title: "Preços atualizados!", className: "bg-green-600 text-white" });
-        } catch (error) {
-            toast({ title: "Erro", description: error.message, variant: "destructive" });
-        } finally {
-            setSaving(false);
-        }
+        toast({ title: "Não disponível", description: "Salvar preços requer endpoint de API.", variant: "destructive" });
     };
 
     const filteredCars = cars.filter(c => c.nome.toLowerCase().includes(filter.toLowerCase()) || c.placa?.toLowerCase().includes(filter));

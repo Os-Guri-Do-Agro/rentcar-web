@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
+import carService from '@/services/cars/carService';
 import { Loader2, Save, ArrowLeft, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
-import { uploadFoto, updateFotoPrincipal, updateFotosGaleria, deleteFoto } from '@/services/fotosService';
 import BrandSelector from '@/components/BrandSelector';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -37,18 +36,19 @@ const AdminEditarCarro = () => {
    }, [carroId]);
 
    const fetchCar = async () => {
-      console.log("Fetching car data for editing:", carroId);
-      const { data, error } = await supabase.from('cars').select('*').eq('id', carroId).single();
-      if (error) {
+      try {
+         const res = await carService.getCarById(carroId);
+         const data = res?.data ?? res;
+         setCar(data);
+         setFormData(data);
+         setSpecs(data.especificacoes || []);
+         setGallery(data.fotos_galeria || []);
+      } catch {
          toast({ title: "Erro", description: "Carro não encontrado", variant: "destructive" });
          navigate('/admin/carros');
-         return;
+      } finally {
+         setLoading(false);
       }
-      setCar(data);
-      setFormData(data);
-      setSpecs(data.especificacoes || []);
-      setGallery(data.fotos_galeria || []);
-      setLoading(false);
    };
 
    const handleChange = (e) => {
@@ -73,9 +73,11 @@ const AdminEditarCarro = () => {
       if (!file) return;
       setUploading(true);
       try {
-         const url = await uploadFoto(file, carroId, 'main');
-         await updateFotoPrincipal(carroId, url);
-         setFormData(prev => ({ ...prev, foto_principal: url, imagem_url: url }));
+         const formData = new FormData();
+         formData.append('foto_principal', file);
+         const res = await carService.patchCarPhoto(carroId, formData);
+         const url = res?.data?.foto_principal ?? res?.foto_principal;
+         if (url) setFormData(prev => ({ ...prev, foto_principal: url, imagem_url: url }));
          toast({ title: "Foto principal atualizada", className: "bg-green-600 text-white border-none" });
       } catch (error) {
          toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
@@ -89,14 +91,11 @@ const AdminEditarCarro = () => {
       if (files.length === 0) return;
       setUploading(true);
       try {
-         const newUrls = [];
-         for (const file of files) {
-            const url = await uploadFoto(file, carroId, 'gallery');
-            newUrls.push(url);
-         }
-         const updatedGallery = [...gallery, ...newUrls];
+         const formData = new FormData();
+         files.forEach(file => formData.append('fotos_galeria', file));
+         const res = await carService.patchCarPhoto(carroId, formData);
+         const updatedGallery = res?.data?.fotos_galeria ?? res?.fotos_galeria ?? gallery;
          setGallery(updatedGallery);
-         await updateFotosGaleria(carroId, updatedGallery);
          toast({ title: "Galeria atualizada", className: "bg-green-600 text-white border-none" });
       } catch (error) {
          toast({ title: "Erro no upload", variant: "destructive" });
@@ -110,12 +109,10 @@ const AdminEditarCarro = () => {
    };
 
    const confirmRemovePhoto = async () => {
-      const photoUrl = gallery[confirmRemoveIdx];
       const newGallery = gallery.filter((_, i) => i !== confirmRemoveIdx);
       setGallery(newGallery);
       setConfirmRemoveIdx(null);
-      await updateFotosGaleria(carroId, newGallery);
-      await deleteFoto(photoUrl);
+      await carService.patchCarById(carroId, { fotos_galeria: newGallery });
    };
 
    const handleSave = async () => {
@@ -126,18 +123,8 @@ const AdminEditarCarro = () => {
       }
 
       setSaving(true);
-      console.log("Saving car changes...", { ...formData, especificacoes: specs });
       try {
-         const { error } = await supabase
-            .from('cars')
-            .update({
-               ...formData,
-               especificacoes: specs,
-               updated_at: new Date().toISOString()
-            })
-            .eq('id', carroId);
-
-         if (error) throw error;
+         await carService.patchCarById(carroId, { ...formData, especificacoes: specs });
          toast({ title: "Alterações salvas!", className: "bg-green-600 text-white" });
       } catch (error) {
          toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });

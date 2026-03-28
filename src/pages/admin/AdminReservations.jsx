@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import React, { useState, useEffect } from 'react';
 import { Loader2, Calendar, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, FileText, Download, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +12,6 @@ const AdminReservations = () => {
   const [syncStatus, setSyncStatus] = useState('synced');
   const [filter, setFilter] = useState('all');
   const { toast } = useToast();
-  const channelRef = useRef(null);
   const navigate = useNavigate();
 
   const fetchReservas = async (isManualRefresh = false) => {
@@ -45,26 +43,10 @@ const AdminReservations = () => {
 
   useEffect(() => {
     fetchReservas();
-
-    channelRef.current = supabase
-      .channel('admin-reservas-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, (payload) => {
-        console.log("Reserva updated:", payload);
-        fetchReservas();
-        toast({ title: "Nova atualização", description: "Dados de reserva atualizados.", className: "bg-blue-600 text-white border-none" });
-      })
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR') setSyncStatus('error');
-      });
-
     const interval = setInterval(() => {
       if (new Date() - lastSynced > 30000) fetchReservas();
     }, 30000);
-
-    return () => {
-      if (channelRef.current) supabase.removeChannel(channelRef.current);
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   const handleNavigateToDetails = (id) => {

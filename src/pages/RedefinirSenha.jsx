@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import authService from '@/services/auth/auth-service';
 import { Helmet } from 'react-helmet';
 import { Lock, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -20,15 +20,14 @@ const RedefinirSenha = () => {
         setLoading(true);
         console.log("Atualizando senha...");
         
-        const { error } = await supabase.auth.updateUser({ password });
-
-        setLoading(false);
-        if (error) {
-            console.error(error);
-            toast({ title: "Erro", description: error.message, variant: "destructive" });
-        } else {
+        try {
+            await authService.postRedefinirSenha({ password });
             toast({ title: "Senha atualizada!", className: "bg-green-600 text-white" });
             navigate('/login');
+        } catch (error) {
+            toast({ title: "Erro", description: error?.message || 'Falha ao redefinir senha.', variant: "destructive" });
+        } finally {
+            setLoading(false);
         }
     };
 

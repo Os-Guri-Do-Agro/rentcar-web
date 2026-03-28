@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 import { Loader2, Mail, MessageSquare, CheckCircle, XCircle, RefreshCw, Search, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownLeft, Settings2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -29,22 +28,8 @@ const AdminLogs = () => {
         setLogs(records);
         setTotalCount(total);
       } else {
-        let query = supabase
-          .from('email_logs')
-          .select('*', { count: 'exact' });
-
-        if (search) {
-          query = query.or(`destinatario.ilike.%${search}%,assunto.ilike.%${search}%`);
-        }
-
-        query = query
-          .order('created_at', { ascending: false })
-          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-        const { data, count, error } = await query;
-        if (error) throw error;
-        setLogs(data);
-        setTotalCount(count);
+        setLogs([]);
+        setTotalCount(0);
       }
     } catch (error) {
       toast({ title: "Erro", description: "Falha ao buscar logs.", variant: "destructive" });

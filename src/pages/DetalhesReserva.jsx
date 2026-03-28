@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { supabase } from '@/lib/supabaseClient';
 import { Loader2, ArrowLeft, FileText, AlertTriangle } from 'lucide-react';
 import DocumentosDisplay from '@/components/DocumentosDisplay';
 import reservasServices from '@/services/reservas/reservas-services';
@@ -14,8 +13,6 @@ const DetalhesReserva = () => {
 
   useEffect(() => {
     fetchData();
-    const sub = supabase.channel(`detail_${reservaId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'reservas', filter: `id=eq.${reservaId}` }, () => fetchData()).subscribe();
-    return () => sub.unsubscribe();
   }, [reservaId]);
 
   const fetchData = async () => {
@@ -80,7 +77,7 @@ const DetalhesReserva = () => {
                               <span>Retirada:</span>
                               <span className="text-right">
                                 <b>{new Date(reserva.data_retirada).toLocaleDateString('pt-BR')}</b>
-                                <span className="ml-1 text-gray-500">às {reserva.hora_retirada || <span className="italic">a definir</span>}</span>
+                                <span className="ml-1 text-gray-500">às {reserva.hora_retirada_solicitada || <span className="italic">a definir</span>}</span>
                               </span>
                             </div>
                             {reserva.hora_retirada_solicitada && reserva.hora_retirada && reserva.hora_retirada !== reserva.hora_retirada_solicitada && (

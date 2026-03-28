@@ -3,26 +3,22 @@
  */
 
 export const abrirLink = (url) => {
-    console.log("[linkUtils] Abrindo link genérico:", url);
     if (!url) return;
     window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 export const abrirInstagram = (url) => {
-    console.log("[linkUtils] Abrindo Instagram:", url);
     if (!url) return;
     // Basic validation could be added here
     window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 export const abrirFacebook = (url) => {
-    console.log("[linkUtils] Abrindo Facebook:", url);
     if (!url) return;
     window.open(url, '_blank', 'noopener,noreferrer');
 };
 
 export const abrirWhatsApp = (numero) => {
-    console.log("[linkUtils] Abrindo WhatsApp para:", numero);
     if (!numero) return;
     
     // Remove non-numeric characters for the link
@@ -33,13 +29,11 @@ export const abrirWhatsApp = (numero) => {
 };
 
 export const abrirEmail = (email) => {
-    console.log("[linkUtils] Abrindo cliente de email para:", email);
     if (!email) return;
     window.location.href = `mailto:${email}`;
 };
 
 export const abrirTelefone = (telefone) => {
-    console.log("[linkUtils] Abrindo discador para:", telefone);
     if (!telefone) return;
     window.location.href = `tel:${telefone.replace(/\D/g, '')}`;
 };

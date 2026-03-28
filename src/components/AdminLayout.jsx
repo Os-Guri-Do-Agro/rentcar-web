@@ -12,6 +12,7 @@ import { useAdminMode } from '@/context/AdminModeContext';
 import whatsappService from '@/services/whatsapp/whatsapp-service';
 
 const QrModal = ({ onClose }) => {
+  const { isAdmin } = useAuth();
   const [qrData, setQrData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,8 +28,9 @@ const QrModal = ({ onClose }) => {
 
   useEffect(() => { fetchQr(setLoading); }, []);
 
-  // Poll status — fecha modal quando conectar
+  // Poll status — fecha modal quando conectar (só roda para admin)
   useEffect(() => {
+    if (!isAdmin) return;
     const id = setInterval(async () => {
       try {
         const res = await whatsappService.getStatus();
@@ -37,7 +39,7 @@ const QrModal = ({ onClose }) => {
       } catch {}
     }, 3000);
     return () => clearInterval(id);
-  }, []);
+  }, [isAdmin]);
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -76,16 +78,18 @@ const QrModal = ({ onClose }) => {
   );
 };
 
-const useWhatsappStatus = () => {
+const useWhatsappStatus = (polling = false, isAdmin = false) => {
   const [status, setStatus] = useState(null);
 
   useEffect(() => {
+    if (!isAdmin) return;
     whatsappService.getStatus()
       .then(res => setStatus(res?.data ?? res))
       .catch(() => {});
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
+    if (!polling || !isAdmin) return;
     const base = (import.meta.env.VITE_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
     const es = new EventSource(`${base}/whatsapp/eventos`);
     es.onmessage = (e) => {
@@ -95,29 +99,29 @@ const useWhatsappStatus = () => {
       } catch {}
     };
     return () => es.close();
-  }, []);
+  }, [polling, isAdmin]);
 
-  // Polling fallback a cada 5s
   useEffect(() => {
+    if (!polling || !isAdmin) return;
     const id = setInterval(() => {
       whatsappService.getStatus()
         .then(res => setStatus(res?.data ?? res))
         .catch(() => {});
     }, 5000);
     return () => clearInterval(id);
-  }, []);
+  }, [polling, isAdmin]);
 
   return status;
 };
 
 const AdminLayout = () => {
-  const { logout, usuario, isBlog } = useAuth();
+  const { logout, usuario, isBlog, isAdmin } = useAuth();
   const { setIsAdminMode } = useAdminMode();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const whatsappStatus = useWhatsappStatus();
+  const whatsappStatus = useWhatsappStatus(showQr, isAdmin);
   const connectionState = whatsappStatus?.estado ?? (whatsappStatus?.conectado ? 'open' : 'close');
 
   const handleExitAdmin = () => {

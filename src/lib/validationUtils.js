@@ -1,5 +1,3 @@
-import { supabase } from '@/lib/supabaseClient';
-
 export const isValidEmail = (email) => {
   if (!email || typeof email !== 'string') return false;
   const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -160,19 +158,3 @@ export const isValidUUID = (value) => {
   return regex.test(value);
 };
 
-export const validateReservaExists = async (reservaId) => {
-  if (!isValidUUID(reservaId)) return false;
-
-  try {
-    const { data, error } = await supabase
-      .from('reservas')
-      .select('id')
-      .eq('id', reservaId)
-      .maybeSingle();
-
-    if (error) return false;
-    return !!data;
-  } catch (err) {
-    return false;
-  }
-};

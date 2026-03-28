@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Autoplay, Pagination } from 'swiper/modules';
 import { Star, Quote, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -25,19 +24,6 @@ const AvaliacoesCarrossel = () => {
         };
 
         fetchReviews();
-
-        // Realtime subscription
-        const subscription = supabase
-            .channel('public:avaliacoes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'avaliacoes' }, (payload) => {
-                console.log('Realtime update:', payload);
-                fetchReviews();
-            })
-            .subscribe();
-
-        return () => {
-            subscription.unsubscribe();
-        };
     }, []);
 
     if (loading) return <div className="py-12 flex justify-center"><Loader2 className="animate-spin text-[#00D166]" size={32}/></div>;

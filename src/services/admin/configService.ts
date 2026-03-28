@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabaseClient'
 import api from '../api'
 
 const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` })
@@ -62,69 +61,6 @@ export const getInstagram            = () => getConfig('instagram',          DEF
 export const getFacebook             = () => getConfig('facebook',           DEFAULTS.facebook)
 export const getMapsUrl              = () => getConfig('maps_url',           DEFAULTS.maps_url)
 
-// --- Car / Plan pricing (Supabase) ---
-export const getCarPricing = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('cars')
-      .select('id, nome, marca, placa, preco_diaria_particular, preco_diaria_motorista, preco_km_extra_particular, preco_km_extra_motorista')
-      .order('nome')
-    if (error) throw error
-    return { success: true, data }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}
-
-export const updateCarPricing = async (carId: string, pricingData: any) => {
-  try {
-    const { error } = await supabase.from('cars').update(pricingData).eq('id', carId)
-    if (error) throw error
-    return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}
-
-export const getPlanPricing = async () => {
-  try {
-    const { data, error } = await supabase.from('planos').select('*').order('created_at')
-    if (error) throw error
-    return { success: true, data }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}
-
-export const createPlanPricing = async (planData: any) => {
-  try {
-    const { data, error } = await supabase.from('planos').insert([planData]).select().single()
-    if (error) throw error
-    return { success: true, data }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}
-
-export const updatePlanPricing = async (planId: string, planData: any) => {
-  try {
-    const { error } = await supabase.from('planos').update(planData).eq('id', planId)
-    if (error) throw error
-    return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}
-
-export const deletePlanPricing = async (planId: string) => {
-  try {
-    const { error } = await supabase.from('planos').delete().eq('id', planId)
-    if (error) throw error
-    return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-}
 
 export const getKmPricing = async () => ({
   success: true,

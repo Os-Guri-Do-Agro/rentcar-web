@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { sendPasswordRecoveryEmail } from '@/services/authService';
 import { isValidEmail } from '@/lib/validationUtils';
 import authService from '@/services/auth/auth-service';
 
